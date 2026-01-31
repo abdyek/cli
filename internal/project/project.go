@@ -1,15 +1,24 @@
 package project
 
 import (
+	"encoding/base64"
 	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/umono-cms/cli/internal/confed"
 	"github.com/umono-cms/cli/internal/download"
+	"golang.org/x/crypto/bcrypt"
 )
 
-func Create(cmd *cobra.Command, projectPath, username, password string) error {
+type Project struct {
+	Username string
+	Password string
+	Path     string
+	Port     string
+}
+
+func Create(cmd *cobra.Command, project Project) error {
 	client := download.NewClient()
 
 	releaseInfo, err := client.GetLatestRelease()
@@ -17,19 +26,45 @@ func Create(cmd *cobra.Command, projectPath, username, password string) error {
 		return fmt.Errorf("failed to fetch release: %w", err)
 	}
 
-	if err := client.DownloadAndExtract(releaseInfo, projectPath); err != nil {
+	if err := client.DownloadAndExtract(releaseInfo, project.Path); err != nil {
 		return err
 	}
 
-	envEditor := confed.NewEnvEditor()
-	envEditor.Read(filepath.Join(projectPath, ".env.example"))
-	envEditor.SetValue("APP_ENV", "prod")
-	envEditor.SetValue("SESSION_DRIVER", "memory")
-	envEditor.SetValue("USERNAME", username)
-	envEditor.SetValue("PASSWORD", password)
-	envEditor.Write(filepath.Join(projectPath, ".env"))
+	hashedUsername, err := hashData(project.Username)
+	if err != nil {
+		return fmt.Errorf("failed to hash Username: %w", err)
+	}
 
-	// TODO: Add HASHED_USERNAME and HASHED_PASSWORD
+	hashedPassword, err := hashData(project.Password)
+	if err != nil {
+		return fmt.Errorf("failed to hash Password: %w", err)
+	}
+
+	envEditor := confed.NewEnvEditor()
+	envEditor.Read(filepath.Join(project.Path, ".env.example"))
+	err = envEditor.SetValue("APP_ENV", "prod").
+		SetValue("SESSION_DRIVER", "memory").
+		AddBlankLine().
+		SetValue("PORT", ":"+project.Port).
+		SetValue("DSN", "umono.db").
+		AddBlankLine().
+		SetValue("USERNAME", "").
+		SetValue("PASSWORD", "").
+		AddBlankLine().
+		SetValue("HASHED_USERNAME", base64.StdEncoding.EncodeToString([]byte(hashedUsername))).
+		SetValue("HASHED_PASSWORD", base64.StdEncoding.EncodeToString([]byte(hashedPassword))).
+		Write(filepath.Join(project.Path, ".env"))
+	if err != nil {
+		return fmt.Errorf("failed to write .env", err)
+	}
 
 	return nil
+}
+
+func hashData(data string) (string, error) {
+	hashedData, err := bcrypt.GenerateFromPassword([]byte(data), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashedData), nil
 }

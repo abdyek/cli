@@ -99,10 +99,12 @@ func runCreate(cmd *cobra.Command, args []string) {
 	}
 	fmt.Println()
 
-	// TODO: Use port
-	_ = port
-
-	err = project.Create(cmd, projectPath, username, password)
+	err = project.Create(cmd, project.Project{
+		Username: username,
+		Password: password,
+		Path:     projectPath,
+		Port:     port,
+	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
