@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/umono-cms/cli/internal/compatibility"
 	"github.com/umono-cms/cli/internal/confed"
 	"github.com/umono-cms/cli/internal/download"
 	"golang.org/x/crypto/bcrypt"
@@ -22,6 +23,15 @@ type Project struct {
 
 func Create(cmd *cobra.Command, project Project) error {
 	client := download.NewClient()
+
+	result, err := compatibility.Check(client)
+	if err != nil {
+		return fmt.Errorf("failed to check compatibility: %w", err)
+	}
+
+	if !result.Compatible {
+		return fmt.Errorf(compatibility.FormatIncompatibleError(result))
+	}
 
 	releaseInfo, err := client.GetLatestRelease()
 	if err != nil {
@@ -57,7 +67,7 @@ func Create(cmd *cobra.Command, project Project) error {
 		SetValue("HASHED_PASSWORD", base64.StdEncoding.EncodeToString([]byte(hashedPassword))).
 		Write(filepath.Join(project.Path, ".env"))
 	if err != nil {
-		return fmt.Errorf("failed to write .env", err)
+		return fmt.Errorf("failed to write .env: %w", err)
 	}
 
 	return nil
@@ -70,6 +80,15 @@ func Upgrade(projectPath string) error {
 	}
 
 	client := download.NewClient()
+
+	result, err := compatibility.Check(client)
+	if err != nil {
+		return fmt.Errorf("failed to check compatibility: %w", err)
+	}
+
+	if !result.Compatible {
+		return fmt.Errorf(compatibility.FormatIncompatibleError(result))
+	}
 
 	releaseInfo, err := client.GetLatestRelease()
 	if err != nil {
