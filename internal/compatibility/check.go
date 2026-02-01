@@ -9,7 +9,7 @@ import (
 	"github.com/umono-cms/cli/internal/version"
 )
 
-const CLIUpgradeURL = "https://github.com/umono-cms/cli/releases/latest"
+const CLIUpgradeURL = "https://umono.io/cli"
 
 type CheckResult struct {
 	Compatible    bool
@@ -64,9 +64,6 @@ Umono version:        %s
 
 Please upgrade your CLI to install this version of Umono:
   → %s
-
-Or install with:
-  go install github.com/umono-cms/cli/cmd/umono@latest
 `, result.CLIVersion, result.MinCLIVersion, result.UmonoVersion, CLIUpgradeURL)
 }
 
