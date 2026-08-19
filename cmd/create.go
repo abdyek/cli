@@ -34,6 +34,22 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
+// promptRequiredLine prints prompt, reads a line via readLine, and retries
+// with warnMsg while the trimmed result is empty.
+func promptRequiredLine(prompt, warnMsg string, readLine func() string) string {
+	for {
+		fmt.Print(prompt)
+		value := strings.TrimSpace(readLine())
+
+		if value == "" {
+			fmt.Println(warnMsg)
+			continue
+		}
+
+		return value
+	}
+}
+
 func runCreate(cmd *cobra.Command, args []string) {
 	projectName := args[0]
 
@@ -53,18 +69,21 @@ func runCreate(cmd *cobra.Command, args []string) {
 	fmt.Printf("📦 Creating new Umono project: '%s'\n", projectName)
 	fmt.Printf("   Configure root account credentials (you can change these later)\n\n")
 
-	fmt.Print("Username: ")
-	var username string
-	fmt.Scanln(&username)
+	username := promptRequiredLine("Username: ", "   ⚠️  Username cannot be empty", func() string {
+		var usernameInput string
+		fmt.Scanln(&usernameInput)
+		return usernameInput
+	})
 
-	fmt.Print("Password: ")
-	passwordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to read password: %v\n", err)
-		os.Exit(1)
-	}
-	password := strings.TrimSpace(string(passwordBytes))
-	fmt.Println()
+	password := promptRequiredLine("Password: ", "   ⚠️  Password cannot be empty", func() string {
+		passwordBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to read password: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println()
+		return string(passwordBytes)
+	})
 
 	var port string
 	for {
