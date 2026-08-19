@@ -2,6 +2,8 @@ module github.com/umono-cms/cli
 
 go 1.26.3
 
+toolchain go1.26.6
+
 require (
 	github.com/google/go-github/v68 v68.0.0
 	github.com/spf13/cobra v1.10.2
