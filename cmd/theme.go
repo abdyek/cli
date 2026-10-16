@@ -20,12 +20,6 @@ var themeDevCmd = &cobra.Command{
 	RunE:  notImplemented,
 }
 
-var themeInstallCmd = &cobra.Command{
-	Use:   "install <file>",
-	Short: "Install a built theme into this Umono project",
-	RunE:  notImplemented,
-}
-
 func init() {
 	themeCmd.AddCommand(themeCreateCmd, themeDevCmd, themeBuildCmd, themeInstallCmd)
 	rootCmd.AddCommand(themeCmd)

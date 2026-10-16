@@ -117,6 +117,23 @@ theme-api-version: 1
 - Comments do not go into the package. For a comment starting with `/*!`, the build warns you to move the note to `LICENSE`.
 - The CLI does not compile CSS. If your CSS needs a compiler, compile it into `assets/theme.css` yourself before the build, and keep its sources outside `assets/`, for example in `src/`: everything under `assets/` goes into the package.
 
+### Install a theme
+
+Run in the root of a Umono project (v0.9 or later), the directory with `umono.json`:
+
+```bash
+umono theme install ~/umono-themes/acme_minimal_0.1.0.umono-theme
+```
+
+The theme is checked with the same checks Umono runs when it activates a theme, and installed as `themes/{org}/{id}/{version}/` with read-only files. Activate it in the admin panel. `install` works offline: the checks against umono.dev and the database run on activation.
+
+| Flag | Effect |
+| --- | --- |
+| `--force` | Reinstall an installed version. The installed theme is not touched: the package waits in `themes-pending/{org}/{id}/{version}/` until the reinstall is approved in the admin panel. |
+| `--allow-incompatible-api` | Install a theme whose `theme-api-version` is outside the range of this Umono (`theme_api_min` to `theme_api_current` in `umono.json`). It cannot be activated until Umono supports it. |
+
+A theme with a `theme-api-version` newer than the CLI knows is refused even with `--allow-incompatible-api`: the CLI cannot verify it. Upgrade the CLI.
+
 ## Requirements
 
 - `curl` or `wget` (for installation)
