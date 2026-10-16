@@ -20,12 +20,6 @@ var themeDevCmd = &cobra.Command{
 	RunE:  notImplemented,
 }
 
-var themeBuildCmd = &cobra.Command{
-	Use:   "build",
-	Short: "Build the theme into dist/",
-	RunE:  notImplemented,
-}
-
 var themeInstallCmd = &cobra.Command{
 	Use:   "install <file>",
 	Short: "Install a built theme into this Umono project",
