@@ -11,6 +11,7 @@ import (
 	"github.com/umono-cms/cli/internal/compatibility"
 	"github.com/umono-cms/cli/internal/confed"
 	"github.com/umono-cms/cli/internal/download"
+	"github.com/umono-cms/cli/internal/umonoproject"
 	crypto "github.com/umono-cms/crypto"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -84,6 +85,9 @@ func Create(cmd *cobra.Command, project Project) error {
 }
 
 func Upgrade(projectPath string) error {
+	if _, err := umonoproject.Detect(projectPath); err != nil {
+		return err
+	}
 	binaryPath := findBinaryPath(projectPath)
 	if binaryPath == "" {
 		return fmt.Errorf("no Umono binary found in %s", projectPath)
