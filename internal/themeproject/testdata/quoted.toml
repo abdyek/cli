@@ -1,0 +1,5 @@
+schema = "https://umono.dev/schemas/theme-manifest/v1"
+id = "acme/minimal"
+contract = "umono/page@v0.1"
+name = "Say \"hi\" \\ <ok> & ünicode"
+version = "0.1.0"

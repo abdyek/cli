@@ -14,12 +14,6 @@ var themeCmd = &cobra.Command{
 	Short: "Develop, build and install themes",
 }
 
-var themeCreateCmd = &cobra.Command{
-	Use:   "create <name>",
-	Short: "Create a theme project",
-	RunE:  notImplemented,
-}
-
 var themeDevCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Develop the theme with a live Umono",

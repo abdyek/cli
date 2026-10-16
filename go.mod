@@ -8,6 +8,7 @@ require (
 	github.com/google/go-github/v68 v68.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/umono-cms/crypto v0.1.0
+	github.com/umono-cms/themecore v0.1.0
 	golang.org/x/crypto v0.50.0
 	golang.org/x/term v0.42.0
 	modernc.org/sqlite v1.49.1
@@ -20,8 +21,11 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/tdewolff/parse/v2 v2.8.16 // indirect
+	github.com/umono-cms/compono v0.7.1 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect

@@ -1,0 +1,13 @@
+schema = "https://umono.dev/schemas/theme-manifest/v1"
+id = "acme/minimal"
+contract = "umono/blog@v0.1"
+name = "Minimal Blog"
+version = "0.1.0"
+description = "Clean blog theme for Umono."
+license = "MIT"
+homepage = "https://example.com/minimal"
+repository = "https://example.com/minimal.git"
+
+[[authors]]
+name = "Acme"
+url = "https://example.com"
