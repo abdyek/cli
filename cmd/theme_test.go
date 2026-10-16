@@ -28,7 +28,7 @@ func TestThemeCommandGroup(t *testing.T) {
 }
 
 func TestThemeSubcommandsAreNotImplementedYet(t *testing.T) {
-	for _, name := range []string{"dev", "install"} {
+	for _, name := range []string{"dev"} {
 		sub, _, err := rootCmd.Find([]string{"theme", name})
 		if err != nil {
 			t.Fatalf("rootCmd.Find([\"theme\", %q]) returned error: %v", name, err)
