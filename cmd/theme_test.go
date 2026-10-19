@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"slices"
 	"testing"
 )
@@ -27,19 +26,25 @@ func TestThemeCommandGroup(t *testing.T) {
 	}
 }
 
-func TestThemeSubcommandsAreNotImplementedYet(t *testing.T) {
-	for _, name := range []string{"dev"} {
-		sub, _, err := rootCmd.Find([]string{"theme", name})
-		if err != nil {
-			t.Fatalf("rootCmd.Find([\"theme\", %q]) returned error: %v", name, err)
-		}
-		if got, want := sub.Name(), name; got != want {
-			t.Fatalf("sub.Name() = %q, want %q", got, want)
-		}
+func TestThemeDevFlags(t *testing.T) {
+	sub, _, err := rootCmd.Find([]string{"theme", "dev"})
+	if err != nil {
+		t.Fatalf("rootCmd.Find([\"theme\", \"dev\"]) returned error: %v", err)
+	}
 
-		err = sub.RunE(sub, nil)
-		if !errors.Is(err, ErrNotImplemented) {
-			t.Fatalf("sub.RunE(sub, nil) for %q returned %v, want ErrNotImplemented", name, err)
-		}
+	portFlag := sub.Flags().Lookup("port")
+	if portFlag == nil {
+		t.Fatalf("sub.Flags().Lookup(\"port\") returned nil")
+	}
+	if got, want := portFlag.DefValue, "8990"; got != want {
+		t.Fatalf("port DefValue = %q, want %q", got, want)
+	}
+
+	updateServerFlag := sub.Flags().Lookup("update-server")
+	if updateServerFlag == nil {
+		t.Fatalf("sub.Flags().Lookup(\"update-server\") returned nil")
+	}
+	if got, want := updateServerFlag.DefValue, "false"; got != want {
+		t.Fatalf("update-server DefValue = %q, want %q", got, want)
 	}
 }
