@@ -1,7 +1,10 @@
 package project
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +12,21 @@ import (
 
 	"github.com/umono-cms/cli/internal/umonoproject"
 )
+
+const builtTemplate = `schema = 'https://umono.dev/schemas/theme-built/v1'
+id = '%s'
+contract = 'example/blog@v1.0'
+theme-api-version = %d
+name = 'Test'
+version = '%s'
+built-at = 2026-10-14T00:00:00Z
+`
+
+// builtTOML returns a valid built.toml of the theme id at version with the
+// Theme API version api.
+func builtTOML(id, version string, api int) string {
+	return fmt.Sprintf(builtTemplate, id, api, version)
+}
 
 func TestUpgradeRequiresAUmonoProject(t *testing.T) {
 	dir := t.TempDir()
@@ -18,7 +36,7 @@ func TestUpgradeRequiresAUmonoProject(t *testing.T) {
 		t.Fatalf("write binary: %v", err)
 	}
 
-	err := Upgrade(dir)
+	err := Upgrade(dir, false)
 	if !errors.Is(err, umonoproject.ErrNotUmonoProject) {
 		t.Fatalf("err = %v, want ErrNotUmonoProject", err)
 	}
@@ -32,7 +50,7 @@ func TestUpgradeLooksForTheBinaryAfterDetection(t *testing.T) {
 		t.Fatalf("write umono.json: %v", err)
 	}
 
-	err := Upgrade(dir)
+	err := Upgrade(dir, false)
 	if err == nil {
 		t.Fatalf("Upgrade returned nil error, want non-nil")
 	}
@@ -83,7 +101,7 @@ func TestApplyReleaseReplacesTheBinaryAndUmonoJSON(t *testing.T) {
 		"umono.json": newManifest,
 	})
 
-	if err := applyRelease(project, release); err != nil {
+	if err := applyRelease(project, release, false, io.Discard); err != nil {
 		t.Fatalf("applyRelease returned err = %v, want nil", err)
 	}
 
@@ -108,7 +126,7 @@ func TestApplyReleaseNeedsUmonoJSON(t *testing.T) {
 		"umono": "new binary",
 	})
 
-	err := applyRelease(project, release)
+	err := applyRelease(project, release, false, io.Discard)
 	if err == nil {
 		t.Fatalf("applyRelease returned nil, want non-nil")
 	}
@@ -137,7 +155,7 @@ func TestApplyReleaseNeedsTheBinary(t *testing.T) {
 		"umono.json": `{"min_cli_version": "0.3.0"}`,
 	})
 
-	err := applyRelease(project, release)
+	err := applyRelease(project, release, false, io.Discard)
 	if err == nil {
 		t.Fatalf("applyRelease returned nil, want non-nil")
 	}
@@ -149,6 +167,185 @@ func TestApplyReleaseNeedsTheBinary(t *testing.T) {
 		t.Fatalf("umono content = %q, want %q", got, want)
 	}
 	if got, want := readFile(t, filepath.Join(project, "umono.json")), `{"min_cli_version": "0.2.2"}`; got != want {
+		t.Fatalf("umono.json content = %q, want %q", got, want)
+	}
+}
+
+func TestApplyReleaseStopsOnAThemeOutsideTheRange(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	oldManifest := `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`
+	writeFiles(t, project, map[string]string{
+		"umono":                                "old binary",
+		"umono.json":                           oldManifest,
+		"themes/acme/minimal/0.1.0/built.toml": builtTOML("acme/minimal", "0.1.0", 1),
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0", "theme_api_current": 2, "theme_api_min": 2}`,
+	})
+
+	err := applyRelease(project, release, false, io.Discard)
+	if err == nil {
+		t.Fatalf("applyRelease returned nil, want non-nil")
+	}
+	if !strings.Contains(err.Error(), "acme/minimal 0.1.0") {
+		t.Fatalf("err = %v, want it to contain %q", err, "acme/minimal 0.1.0")
+	}
+	if !strings.Contains(err.Error(), "Theme API 1") {
+		t.Fatalf("err = %v, want it to contain %q", err, "Theme API 1")
+	}
+	if !strings.Contains(err.Error(), "--allow-theme-break") {
+		t.Fatalf("err = %v, want it to contain %q", err, "--allow-theme-break")
+	}
+
+	if got, want := readFile(t, filepath.Join(project, "umono")), "old binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	if got, want := readFile(t, filepath.Join(project, "umono.json")), oldManifest; got != want {
+		t.Fatalf("umono.json content = %q, want %q", got, want)
+	}
+}
+
+func TestApplyReleaseAllowsAThemeBreak(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	writeFiles(t, project, map[string]string{
+		"umono":                                "old binary",
+		"umono.json":                           `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`,
+		"themes/acme/minimal/0.1.0/built.toml": builtTOML("acme/minimal", "0.1.0", 1),
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0", "theme_api_current": 2, "theme_api_min": 2}`,
+	})
+
+	var out bytes.Buffer
+	err := applyRelease(project, release, true, &out)
+	if err != nil {
+		t.Fatalf("applyRelease returned err = %v, want nil", err)
+	}
+
+	if got, want := readFile(t, filepath.Join(project, "umono")), "new binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	if !strings.Contains(out.String(), "acme/minimal 0.1.0") {
+		t.Fatalf("out = %q, want it to contain %q", out.String(), "acme/minimal 0.1.0")
+	}
+}
+
+func TestApplyReleaseKeepsAThemeInTheRange(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	writeFiles(t, project, map[string]string{
+		"umono":                                "old binary",
+		"umono.json":                           `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`,
+		"themes/acme/minimal/0.1.0/built.toml": builtTOML("acme/minimal", "0.1.0", 1),
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0", "theme_api_current": 2, "theme_api_min": 1}`,
+	})
+
+	err := applyRelease(project, release, false, io.Discard)
+	if err != nil {
+		t.Fatalf("applyRelease returned err = %v, want nil", err)
+	}
+	if got, want := readFile(t, filepath.Join(project, "umono")), "new binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+}
+
+func TestApplyReleaseStopsOnAnUnreadableTheme(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	oldManifest := `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`
+	writeFiles(t, project, map[string]string{
+		"umono":                               "old binary",
+		"umono.json":                          oldManifest,
+		"themes/acme/broken/0.1.0/built.toml": "not a built.toml",
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0", "theme_api_current": 2, "theme_api_min": 1}`,
+	})
+
+	err := applyRelease(project, release, false, io.Discard)
+	if err == nil {
+		t.Fatalf("applyRelease returned nil, want non-nil")
+	}
+	if !strings.Contains(err.Error(), "acme/broken/0.1.0") {
+		t.Fatalf("err = %v, want it to contain %q", err, "acme/broken/0.1.0")
+	}
+
+	if got, want := readFile(t, filepath.Join(project, "umono")), "old binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	if got, want := readFile(t, filepath.Join(project, "umono.json")), oldManifest; got != want {
+		t.Fatalf("umono.json content = %q, want %q", got, want)
+	}
+}
+
+func TestApplyReleaseSkipsTheDevTheme(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	writeFiles(t, project, map[string]string{
+		"umono":                           "old binary",
+		"umono.json":                      `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`,
+		"themes/dev/dev/0.0.0/built.toml": "not a built.toml",
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0", "theme_api_current": 2, "theme_api_min": 1}`,
+	})
+
+	err := applyRelease(project, release, false, io.Discard)
+	if err != nil {
+		t.Fatalf("applyRelease returned err = %v, want nil", err)
+	}
+}
+
+func TestApplyReleaseStopsWhenTheReleaseHasNoThemes(t *testing.T) {
+	project := t.TempDir()
+	release := t.TempDir()
+
+	oldManifest := `{"min_cli_version": "0.2.2", "theme_api_current": 1, "theme_api_min": 1}`
+	writeFiles(t, project, map[string]string{
+		"umono":                                "old binary",
+		"umono.json":                           oldManifest,
+		"themes/acme/minimal/0.1.0/built.toml": builtTOML("acme/minimal", "0.1.0", 1),
+	})
+
+	writeFiles(t, release, map[string]string{
+		"umono":      "new binary",
+		"umono.json": `{"min_cli_version": "0.3.0"}`,
+	})
+
+	err := applyRelease(project, release, false, io.Discard)
+	if err == nil {
+		t.Fatalf("applyRelease returned nil, want non-nil")
+	}
+	if !strings.Contains(err.Error(), "acme/minimal 0.1.0") {
+		t.Fatalf("err = %v, want it to contain %q", err, "acme/minimal 0.1.0")
+	}
+	if !strings.Contains(err.Error(), "does not support themes") {
+		t.Fatalf("err = %v, want it to contain %q", err, "does not support themes")
+	}
+
+	if got, want := readFile(t, filepath.Join(project, "umono")), "old binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	if got, want := readFile(t, filepath.Join(project, "umono.json")), oldManifest; got != want {
 		t.Fatalf("umono.json content = %q, want %q", got, want)
 	}
 }
