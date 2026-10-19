@@ -9,7 +9,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/tdewolff/parse/v2 v2.8.16
 	github.com/umono-cms/crypto v0.1.0
-	github.com/umono-cms/themecore v0.1.0
+	github.com/umono-cms/themecore v0.2.0
 	golang.org/x/crypto v0.50.0
 	golang.org/x/term v0.42.0
 	modernc.org/sqlite v1.49.1

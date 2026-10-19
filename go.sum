@@ -44,8 +44,8 @@ github.com/umono-cms/compono v0.7.1 h1:4fxu9F8zf0DViPMXkQWW3tX0/SyHqxkXosI17jZnb
 github.com/umono-cms/compono v0.7.1/go.mod h1:xmv1PX8nrUAczVM/LYgGRC1mn9ryeutfA76oJNuaHNI=
 github.com/umono-cms/crypto v0.1.0 h1:xKKlLKxroXVIf4oUecWneaTh1NX3TuO3QKaMwMUt9dY=
 github.com/umono-cms/crypto v0.1.0/go.mod h1:SPx8bAPC9Z2GzcwJTti4vO2yqeziTRzb0S91BGCFn5g=
-github.com/umono-cms/themecore v0.1.0 h1:D7GbzE3CNJvqfopFJaUtUlGRYIDWtEjAQL4AUqZ2qJ4=
-github.com/umono-cms/themecore v0.1.0/go.mod h1:hcSQ8/TK1y1UXph3uFmU8fHk7qmMhPAf/5C93brjmoI=
+github.com/umono-cms/themecore v0.2.0 h1:ORX7FcvUr4TPgTmyQDiuYVFFdksW4lfSCgKPGh4leyg=
+github.com/umono-cms/themecore v0.2.0/go.mod h1:hcSQ8/TK1y1UXph3uFmU8fHk7qmMhPAf/5C93brjmoI=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
 golang.org/x/crypto v0.50.0 h1:zO47/JPrL6vsNkINmLoo/PH1gcxpls50DNogFvB5ZGI=
 golang.org/x/crypto v0.50.0/go.mod h1:3muZ7vA7PBCE6xgPX7nkzzjiUq87kRItoJQM1Yo8S+Q=
