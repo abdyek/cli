@@ -51,6 +51,8 @@ umono upgrade
 
 It replaces the Umono binary and `umono.json`, which tells the CLI the release's minimum CLI version and Theme API range. `umono.db`, `.env`, `uploads/` and `themes/` are kept.
 
+The CLI does not know which installed theme is active, so before replacing anything it checks every theme under `themes/` against the new release's Theme API range. If a theme is outside the range, or its `built.toml` cannot be read, the upgrade stops and lists them. `--allow-theme-break` upgrades anyway and only lists them; an active theme among them stops working and its pages render with the fallback.
+
 ## Themes
 
 `umono theme` holds the commands of theme development.
