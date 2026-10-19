@@ -25,8 +25,11 @@ type Project struct {
 }
 
 func Create(cmd *cobra.Command, project Project) error {
-	client := download.NewClient()
+	return CreateWith(download.NewClient(), project)
+}
 
+// CreateWith creates project with the latest release of client.
+func CreateWith(client *download.Client, project Project) error {
 	result, err := compatibility.Check(client)
 	if err != nil {
 		return fmt.Errorf("failed to check compatibility: %w", err)
@@ -86,6 +89,12 @@ func Create(cmd *cobra.Command, project Project) error {
 }
 
 func Upgrade(projectPath string, allowThemeBreak bool) error {
+	return UpgradeWith(download.NewClient(), projectPath, allowThemeBreak)
+}
+
+// UpgradeWith upgrades the project at projectPath to the latest release of
+// client.
+func UpgradeWith(client *download.Client, projectPath string, allowThemeBreak bool) error {
 	if _, err := umonoproject.Detect(projectPath); err != nil {
 		return err
 	}
@@ -93,8 +102,6 @@ func Upgrade(projectPath string, allowThemeBreak bool) error {
 	if binaryPath == "" {
 		return fmt.Errorf("no Umono binary found in %s", projectPath)
 	}
-
-	client := download.NewClient()
 
 	result, err := compatibility.Check(client)
 	if err != nil {

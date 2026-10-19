@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +32,18 @@ func NewClient() *Client {
 		gh:       github.NewClient(nil),
 		verifier: checksum.NewVerifier(),
 	}
+}
+
+// NewClientWithURL returns a client of the GitHub API at apiURL instead of
+// api.github.com, for example a fake one in tests.
+func NewClientWithURL(apiURL string) (*Client, error) {
+	u, err := url.Parse(strings.TrimSuffix(apiURL, "/") + "/")
+	if err != nil {
+		return nil, err
+	}
+	gh := github.NewClient(nil)
+	gh.BaseURL = u
+	return &Client{gh: gh, verifier: checksum.NewVerifier()}, nil
 }
 
 type ReleaseInfo struct {
