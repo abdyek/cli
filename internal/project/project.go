@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/umono-cms/cli/internal/compatibility"
@@ -84,7 +85,7 @@ func Create(cmd *cobra.Command, project Project) error {
 	return nil
 }
 
-func Upgrade(projectPath string) error {
+func Upgrade(projectPath string, allowThemeBreak bool) error {
 	if _, err := umonoproject.Detect(projectPath); err != nil {
 		return err
 	}
@@ -121,14 +122,17 @@ func Upgrade(projectPath string) error {
 		return err
 	}
 
-	return applyRelease(projectPath, tmpDir)
+	return applyRelease(projectPath, tmpDir, allowThemeBreak, os.Stdout)
 }
 
 // applyRelease installs the release extracted to releaseDir into projectDir:
 // the binary and umono.json, which carries the release's min_cli_version and
 // Theme API range. Nothing changes when the release lacks either. If
-// umono.json cannot be replaced, the old binary is put back.
-func applyRelease(projectDir, releaseDir string) error {
+// umono.json cannot be replaced, the old binary is put back. The installed
+// themes are checked against the release's Theme API range first: a theme
+// that the release would not activate stops it, unless allowThemeBreak is
+// set, which only reports it to out.
+func applyRelease(projectDir, releaseDir string, allowThemeBreak bool, out io.Writer) error {
 	binaryPath := findBinaryPath(projectDir)
 	if binaryPath == "" {
 		return fmt.Errorf("no Umono binary found in %s", projectDir)
@@ -139,6 +143,21 @@ func applyRelease(projectDir, releaseDir string) error {
 	}
 	if _, err := umonoproject.Detect(releaseDir); err != nil {
 		return fmt.Errorf("downloaded release has no valid umono.json: %w", err)
+	}
+
+	breaks, err := checkThemes(projectDir, releaseDir)
+	if err != nil {
+		return fmt.Errorf("failed to check the installed themes: %w", err)
+	}
+	if len(breaks) > 0 {
+		var list strings.Builder
+		for _, b := range breaks {
+			fmt.Fprintf(&list, "  - %s: %s\n", b.Theme, b.Reason)
+		}
+		if !allowThemeBreak {
+			return fmt.Errorf("these installed themes would not work with the new Umono:\n%sUpgrade anyway with --allow-theme-break.", list.String())
+		}
+		fmt.Fprintf(out, "⚠️  These installed themes will not work with the new Umono:\n%s", list.String())
 	}
 
 	manifestPath := filepath.Join(projectDir, "umono.json")
