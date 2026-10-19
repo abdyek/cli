@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/umono-cms/cli/internal/download"
+	"github.com/umono-cms/cli/internal/download/downloadtest"
 	"github.com/umono-cms/cli/internal/umonoproject"
 )
 
@@ -346,6 +349,82 @@ func TestApplyReleaseStopsWhenTheReleaseHasNoThemes(t *testing.T) {
 		t.Fatalf("umono content = %q, want %q", got, want)
 	}
 	if got, want := readFile(t, filepath.Join(project, "umono.json")), oldManifest; got != want {
+		t.Fatalf("umono.json content = %q, want %q", got, want)
+	}
+}
+
+// releaseFiles are the files of a fake Umono release with min_cli_version
+// min.
+func releaseFiles(min string) map[string][]byte {
+	return map[string][]byte{
+		"umono":        []byte("new binary"),
+		"umono.json":   []byte(`{"min_cli_version": "` + min + `", "theme_api_current": 1, "theme_api_min": 1}`),
+		".env.example": []byte("APP_ENV=\n"),
+	}
+}
+
+func TestCreateWithDownloadsTheLatestRelease(t *testing.T) {
+	srv := downloadtest.New(t, "v0.9.0", releaseFiles("0.0.0"))
+	client, err := download.NewClientWithURL(srv.URL)
+	if err != nil {
+		t.Fatalf("NewClientWithURL: %v", err)
+	}
+	dir := t.TempDir()
+	err = CreateWith(client, Project{Username: "admin", Password: "admin", Path: dir, Port: "8999"})
+	if err != nil {
+		t.Fatalf("CreateWith: %v", err)
+	}
+	if got, want := readFile(t, filepath.Join(dir, "umono")), "new binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	env := readFile(t, filepath.Join(dir, ".env"))
+	if !strings.Contains(env, "HASHED_USERNAME=") {
+		t.Fatalf(".env = %q, want it to contain %q", env, "HASHED_USERNAME=")
+	}
+	if !strings.Contains(env, "PORT=8999") {
+		t.Fatalf(".env = %q, want it to contain %q", env, "PORT=8999")
+	}
+}
+
+func TestCreateWithStopsOnAnOldCLI(t *testing.T) {
+	srv := downloadtest.New(t, "v0.9.0", releaseFiles("99.0.0"))
+	client, err := download.NewClientWithURL(srv.URL)
+	if err != nil {
+		t.Fatalf("NewClientWithURL: %v", err)
+	}
+	dir := t.TempDir()
+	err = CreateWith(client, Project{Username: "admin", Password: "admin", Path: dir, Port: "8999"})
+	if err == nil {
+		t.Fatalf("CreateWith returned nil, want non-nil")
+	}
+	if !strings.Contains(err.Error(), "CLI version incompatible") {
+		t.Fatalf("err = %v, want it to contain %q", err, "CLI version incompatible")
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "umono")); !errors.Is(statErr, fs.ErrNotExist) {
+		t.Fatalf("os.Stat umono: err = %v, want fs.ErrNotExist", statErr)
+	}
+}
+
+func TestUpgradeWithReplacesTheBinaryAndUmonoJSON(t *testing.T) {
+	srv := downloadtest.New(t, "v0.9.0", releaseFiles("0.0.0"))
+	client, err := download.NewClientWithURL(srv.URL)
+	if err != nil {
+		t.Fatalf("NewClientWithURL: %v", err)
+	}
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "umono"), []byte("old binary"), 0o755); err != nil {
+		t.Fatalf("write umono: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "umono.json"), []byte(`{"min_cli_version": "0.0.0", "theme_api_current": 1, "theme_api_min": 1}`), 0o644); err != nil {
+		t.Fatalf("write umono.json: %v", err)
+	}
+	if err := UpgradeWith(client, dir, false); err != nil {
+		t.Fatalf("UpgradeWith: %v", err)
+	}
+	if got, want := readFile(t, filepath.Join(dir, "umono")), "new binary"; got != want {
+		t.Fatalf("umono content = %q, want %q", got, want)
+	}
+	if got, want := readFile(t, filepath.Join(dir, "umono.json")), string(releaseFiles("0.0.0")["umono.json"]); got != want {
 		t.Fatalf("umono.json content = %q, want %q", got, want)
 	}
 }
