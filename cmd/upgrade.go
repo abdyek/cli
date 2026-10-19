@@ -16,7 +16,7 @@ var upgradeCmd = &cobra.Command{
 This command will:
   - Check for the latest Umono release
   - Download the new binary for your platform
-  - Replace the existing binary while preserving your data
+  - Replace the existing binary and umono.json while preserving your data
 
 Your database (umono.db) and configuration (.env) will be preserved.
 
