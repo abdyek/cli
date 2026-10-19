@@ -100,6 +100,22 @@ umono theme create new-theme --id acme/minimal --name "Minimal" --contract umono
 - If the contract cannot be fetched, the project is still created with a warning. `umono theme dev` and `umono theme build` fetch it when it is missing.
 - `create` does not write a `LICENSE` file. With `--license`, it reminds you to add the license text to the project root.
 
+### Develop a theme
+
+Run in the theme project:
+
+```bash
+umono theme dev
+```
+
+Open http://localhost:8990. Pages are served by a Umono in `.dev/server`, behind the dev proxy, with the theme of the project. The admin panel at http://localhost:8990/admin needs no login. Create pages there and bind them to the layouts of the contract: `.dev/server` starts with an empty database and keeps it between runs.
+
+- The first run fetches the contract of `theme.toml` when it is missing, and sets `.dev/server` up with the latest Umono release and the account `admin`/`admin`. After that, `dev` works offline.
+- `.dev/server` is never updated by itself. When its Theme API differs from the CLI's, `dev` warns. `umono theme dev --update-server` updates it to the latest release and keeps its database. To start over, delete `.dev/server`.
+- A change of `assets/theme.css` swaps the stylesheet without a reload. Other changes under `assets/` and changes of `attributes.toml` and `theme.toml` reload the page. The checks of `build` run on every change, and their errors and warnings show in an overlay on the page.
+- When the contract in `theme.toml` changes, its file is fetched when missing and `.dev/server` restarts with it.
+- The proxy listens on port 8990. Choose another with `--port`, for example `umono theme dev --port 7000`.
+
 ### Build a theme
 
 Run in the theme project:
