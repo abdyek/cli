@@ -41,6 +41,16 @@ Create a new website:
 umono create my-website
 ```
 
+## Upgrade
+
+Run in the project root to move the site to the latest Umono release:
+
+```bash
+umono upgrade
+```
+
+It replaces the Umono binary and `umono.json`, which tells the CLI the release's minimum CLI version and Theme API range. `umono.db`, `.env`, `uploads/` and `themes/` are kept.
+
 ## Themes
 
 `umono theme` holds the commands of theme development.
