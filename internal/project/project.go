@@ -121,23 +121,52 @@ func Upgrade(projectPath string) error {
 		return err
 	}
 
-	newBinaryPath := findBinaryPath(tmpDir)
+	return applyRelease(projectPath, tmpDir)
+}
+
+// applyRelease installs the release extracted to releaseDir into projectDir:
+// the binary and umono.json, which carries the release's min_cli_version and
+// Theme API range. Nothing changes when the release lacks either. If
+// umono.json cannot be replaced, the old binary is put back.
+func applyRelease(projectDir, releaseDir string) error {
+	binaryPath := findBinaryPath(projectDir)
+	if binaryPath == "" {
+		return fmt.Errorf("no Umono binary found in %s", projectDir)
+	}
+	newBinaryPath := findBinaryPath(releaseDir)
 	if newBinaryPath == "" {
 		return fmt.Errorf("no binary found in downloaded release")
+	}
+	if _, err := umonoproject.Detect(releaseDir); err != nil {
+		return fmt.Errorf("downloaded release has no valid umono.json: %w", err)
+	}
+
+	manifestPath := filepath.Join(projectDir, "umono.json")
+	newManifestPath := manifestPath + ".new"
+	if err := copyFile(filepath.Join(releaseDir, "umono.json"), newManifestPath); err != nil {
+		os.Remove(newManifestPath)
+		return fmt.Errorf("failed to prepare umono.json: %w", err)
 	}
 
 	backupPath := binaryPath + ".backup"
 	if err := os.Rename(binaryPath, backupPath); err != nil {
+		os.Remove(newManifestPath)
 		return fmt.Errorf("failed to backup existing binary: %w", err)
 	}
 
 	if err := copyFile(newBinaryPath, binaryPath); err != nil {
 		os.Rename(backupPath, binaryPath)
+		os.Remove(newManifestPath)
 		return fmt.Errorf("failed to install new binary: %w", err)
 	}
 
-	os.Remove(backupPath)
+	if err := os.Rename(newManifestPath, manifestPath); err != nil {
+		os.Rename(backupPath, binaryPath)
+		os.Remove(newManifestPath)
+		return fmt.Errorf("failed to install umono.json: %w", err)
+	}
 
+	os.Remove(backupPath)
 	return nil
 }
 
