@@ -53,6 +53,9 @@ func newProject(t *testing.T) (string, string) {
 
 var noRegistry = themeproject.Registry{BaseURL: "http://127.0.0.1:1", Client: &http.Client{Timeout: time.Second}}
 
+// attributesTOML is an attributes.toml of the layout of umono/page@v0.1.
+const attributesTOML = "schema = \"https://umono.dev/schemas/theme-attributes/v1\"\n\n[address.\"page\"]\nclass = \"layout-page\"\n"
+
 func link(t *testing.T, serverDir, name string) string {
 	t.Helper()
 	target, err := os.Readlink(filepath.Join(serverDir, Path, name))
@@ -111,7 +114,7 @@ func TestSyncWritesTheDevDirectory(t *testing.T) {
 func TestSyncLinksAttributesAndRemovesTheLink(t *testing.T) {
 	projectDir, serverDir := newProject(t)
 
-	writeFile(t, filepath.Join(projectDir, "attributes.toml"), []byte("schema = \"https://umono.dev/schemas/theme-attributes/v1\"\n"))
+	writeFile(t, filepath.Join(projectDir, "attributes.toml"), []byte(attributesTOML))
 
 	state, err := Sync(context.Background(), projectDir, serverDir, noRegistry, now)
 	if err != nil {
