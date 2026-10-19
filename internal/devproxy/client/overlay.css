@@ -1,0 +1,60 @@
+/* The overlay of umono theme dev. It lives in a closed shadow root outside
+   <umono-root>, so the theme's CSS does not reach it; it uses no custom
+   properties. */
+:host {
+  all: initial;
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  z-index: 2147483647;
+}
+
+.panel {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 16px 20px;
+  border: 1px solid #7f1d1d;
+  border-radius: 12px;
+  background: #1c1917;
+  color: #fafaf9;
+  font: 14px/1.5 system-ui, sans-serif;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+h2.error {
+  color: #fca5a5;
+}
+
+h2.warning {
+  color: #fcd34d;
+}
+
+ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+li {
+  white-space: pre-wrap;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+
+button {
+  padding: 4px 12px;
+  border: 1px solid #57534e;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}

@@ -31,6 +31,7 @@ type Proxy struct {
 	target  atomic.Pointer[url.URL]
 	rp      *httputil.ReverseProxy
 	session session
+	events  broker
 }
 
 // sessionKey marks an outgoing request that carries the proxy's session,
@@ -63,7 +64,7 @@ func (p *Proxy) SetTarget(target string) error {
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(r.URL.Path, prefix) {
-		http.NotFound(w, r)
+		p.serveOwn(w, r)
 		return
 	}
 	p.rp.ServeHTTP(w, r)
