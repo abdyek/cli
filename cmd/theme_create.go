@@ -18,11 +18,12 @@ import (
 )
 
 var themeCreateCmd = &cobra.Command{
-	Use:   "create <name>",
-	Short: "Create a theme project",
-	Long:  "Create a theme project in a new directory. Flags answer the questions; the missing ones are asked. With --no-input, or when standard input is not a terminal, nothing is asked.",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runThemeCreateCmd,
+	Use:               "create <name>",
+	Short:             "Create a theme project",
+	Long:              "Create a theme project in a new directory. Flags answer the questions; the missing ones are asked. With --no-input, or when standard input is not a terminal, nothing is asked.",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: cobra.NoFileCompletions,
+	RunE:              runThemeCreateCmd,
 }
 
 func init() {

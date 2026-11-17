@@ -5,10 +5,11 @@ import (
 )
 
 var restartCmd = &cobra.Command{
-	Use:   "restart",
-	Short: "Restart Umono",
-	Long:  `Restart the Umono application in the current directory. Equivalent to running 'down' followed by 'up'.`,
-	Run:   runRestart,
+	Use:               "restart",
+	Short:             "Restart Umono",
+	Long:              `Restart the Umono application in the current directory. Equivalent to running 'down' followed by 'up'.`,
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runRestart,
 }
 
 func init() {

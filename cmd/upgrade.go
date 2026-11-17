@@ -26,7 +26,8 @@ Your database (umono.db) and configuration (.env) will be preserved.
 Example:
   cd my-project
   umono upgrade`,
-	Run: runUpgrade,
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runUpgrade,
 }
 
 func init() {
