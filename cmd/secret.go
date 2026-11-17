@@ -21,6 +21,7 @@ var secretCmd = &cobra.Command{
 	Use:               "secret",
 	Short:             "Manage encryption secrets",
 	PersistentPreRunE: requireUmonoStopped,
+	ValidArgsFunction: cobra.NoFileCompletions,
 }
 
 var secretInitCmd = &cobra.Command{

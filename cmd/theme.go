@@ -5,8 +5,9 @@ import (
 )
 
 var themeCmd = &cobra.Command{
-	Use:   "theme",
-	Short: "Develop, build and install themes",
+	Use:               "theme",
+	Short:             "Develop, build and install themes",
+	ValidArgsFunction: cobra.NoFileCompletions,
 }
 
 func init() {
