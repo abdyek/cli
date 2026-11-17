@@ -29,6 +29,7 @@ var themeCreateCmd = &cobra.Command{
 func init() {
 	for _, f := range createFields {
 		themeCreateCmd.Flags().String(f.flag, "", f.prompt)
+		cobra.CheckErr(themeCreateCmd.RegisterFlagCompletionFunc(f.flag, cobra.NoFileCompletions))
 	}
 	themeCreateCmd.Flags().Bool("no-input", false, "Ask nothing; a missing required flag is an error")
 }

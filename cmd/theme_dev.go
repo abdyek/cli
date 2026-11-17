@@ -46,5 +46,6 @@ it to the latest release and keeps its database.`,
 
 func init() {
 	themeDevCmd.Flags().IntVar(&themeDevPort, "port", themedev.DefaultPort, "Port of the dev proxy")
+	cobra.CheckErr(themeDevCmd.RegisterFlagCompletionFunc("port", cobra.NoFileCompletions))
 	themeDevCmd.Flags().BoolVar(&themeDevUpdateServer, "update-server", false, "Update .dev/server to the latest Umono release first, keeping its database")
 }
