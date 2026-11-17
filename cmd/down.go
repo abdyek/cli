@@ -12,10 +12,11 @@ import (
 )
 
 var downCmd = &cobra.Command{
-	Use:   "down",
-	Short: "Stop Umono",
-	Long:  `Stop the running Umono application in the current directory.`,
-	Run:   runDown,
+	Use:               "down",
+	Short:             "Stop Umono",
+	Long:              `Stop the running Umono application in the current directory.`,
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runDown,
 }
 
 func init() {

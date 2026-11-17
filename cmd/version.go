@@ -8,9 +8,10 @@ import (
 )
 
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number",
-	Run:   runVersion,
+	Use:               "version",
+	Short:             "Print the version number",
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runVersion,
 }
 
 func init() {

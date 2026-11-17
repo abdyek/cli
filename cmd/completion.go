@@ -6,17 +6,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var completionShells = []string{"bash", "zsh", "fish"}
+
 var completionCmd = &cobra.Command{
 	Use:                   "completion <shell>",
 	Short:                 "Generate the shell completion script",
 	Args:                  cobra.ExactArgs(1),
-	ValidArgs:             []string{"bash", "zsh", "fish"},
+	ValidArgsFunction:     completeShell,
 	DisableFlagsInUseLine: true,
 	RunE:                  runCompletion,
 }
 
 func init() {
 	rootCmd.AddCommand(completionCmd)
+}
+
+// completeShell suggests the supported shells for the first argument, and
+// nothing after it.
+func completeShell(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return completionShells, cobra.ShellCompDirectiveNoFileComp
 }
 
 func runCompletion(cmd *cobra.Command, args []string) error {

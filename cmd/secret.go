@@ -21,11 +21,13 @@ var secretCmd = &cobra.Command{
 	Use:               "secret",
 	Short:             "Manage encryption secrets",
 	PersistentPreRunE: requireUmonoStopped,
+	ValidArgsFunction: cobra.NoFileCompletions,
 }
 
 var secretInitCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Generate and store UMONO_SECRET if not already set",
+	Use:               "init",
+	Short:             "Generate and store UMONO_SECRET if not already set",
+	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -62,8 +64,9 @@ var secretInitCmd = &cobra.Command{
 }
 
 var secretRotateCmd = &cobra.Command{
-	Use:   "rotate",
-	Short: "Rotate UMONO_SECRET and re-encrypt all stored secrets",
+	Use:               "rotate",
+	Short:             "Rotate UMONO_SECRET and re-encrypt all stored secrets",
+	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runSecretRotate(cmd)
 	},

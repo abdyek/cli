@@ -15,10 +15,11 @@ import (
 var detach bool
 
 var upCmd = &cobra.Command{
-	Use:   "up",
-	Short: "Start Umono",
-	Long:  `Start the Umono application in the current directory. If Umono is already running, it will notify you. Use -d flag to run in background (detached mode).`,
-	Run:   runUp,
+	Use:               "up",
+	Short:             "Start Umono",
+	Long:              `Start the Umono application in the current directory. If Umono is already running, it will notify you. Use -d flag to run in background (detached mode).`,
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runUp,
 }
 
 func init() {

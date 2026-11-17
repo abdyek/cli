@@ -14,10 +14,11 @@ import (
 )
 
 var themeBuildCmd = &cobra.Command{
-	Use:   "build",
-	Short: "Build the theme into dist/",
-	Long:  "Check the theme project in the working directory and build it into dist/{org}_{id}_{version}.umono-theme.",
-	Args:  cobra.NoArgs,
+	Use:               "build",
+	Short:             "Build the theme into dist/",
+	Long:              "Check the theme project in the working directory and build it into dist/{org}_{id}_{version}.umono-theme.",
+	Args:              cobra.NoArgs,
+	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runThemeBuild(cmd.Context(), ".", cmd.OutOrStdout(), themeproject.DefaultRegistry, time.Now())
 	},

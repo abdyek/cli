@@ -26,8 +26,9 @@ Example:
   umono create my-project
   cd my-project
   umono up`,
-	Args: cobra.ExactArgs(1),
-	Run:  runCreate,
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runCreate,
 }
 
 func init() {

@@ -10,15 +10,25 @@ import (
 )
 
 var themeInstallCmd = &cobra.Command{
-	Use:   "install <file>",
-	Short: "Install a built theme into this Umono project",
-	Long:  "Install a built theme (.umono-theme) into the Umono project in the working directory as themes/{org}/{id}/{version}/. Activate it in the admin panel.",
-	Args:  cobra.ExactArgs(1),
+	Use:               "install <file>",
+	Short:             "Install a built theme into this Umono project",
+	Long:              "Install a built theme (.umono-theme) into the Umono project in the working directory as themes/{org}/{id}/{version}/. Activate it in the admin panel.",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeThemeFile,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		force, _ := cmd.Flags().GetBool("force")
 		allow, _ := cmd.Flags().GetBool("allow-incompatible-api")
 		return runThemeInstall(".", args[0], themeinstall.Options{Force: force, AllowIncompatibleAPI: allow}, cmd.OutOrStdout())
 	},
+}
+
+// completeThemeFile suggests only .umono-theme files and directories for the
+// file argument, and nothing after it.
+func completeThemeFile(cmd *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return []cobra.Completion{"umono-theme"}, cobra.ShellCompDirectiveFilterFileExt
 }
 
 func init() {

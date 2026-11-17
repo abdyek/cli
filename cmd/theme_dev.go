@@ -27,7 +27,8 @@ overlay.
 The first run sets .dev/server up with the latest Umono release and the
 account admin/admin. It is never updated by itself: --update-server updates
 it to the latest release and keeps its database.`,
-	Args: cobra.NoArgs,
+	Args:              cobra.NoArgs,
+	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -45,5 +46,6 @@ it to the latest release and keeps its database.`,
 
 func init() {
 	themeDevCmd.Flags().IntVar(&themeDevPort, "port", themedev.DefaultPort, "Port of the dev proxy")
+	cobra.CheckErr(themeDevCmd.RegisterFlagCompletionFunc("port", cobra.NoFileCompletions))
 	themeDevCmd.Flags().BoolVar(&themeDevUpdateServer, "update-server", false, "Update .dev/server to the latest Umono release first, keeping its database")
 }

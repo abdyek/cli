@@ -13,10 +13,11 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show Umono status",
-	Long:  `Show the running status of Umono application in the current directory.`,
-	Run:   runStatus,
+	Use:               "status",
+	Short:             "Show Umono status",
+	Long:              `Show the running status of Umono application in the current directory.`,
+	ValidArgsFunction: cobra.NoFileCompletions,
+	Run:               runStatus,
 }
 
 func init() {
