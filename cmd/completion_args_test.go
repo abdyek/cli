@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -121,4 +122,63 @@ func TestThemeInstallCompletesThemeFiles(t *testing.T) {
 			t.Fatalf("directive = %v, want ShellCompDirectiveNoFileComp bit set", directive)
 		}
 	})
+}
+
+// suggestionNames returns the name of every suggestion, without the
+// description that cobra may add after a tab.
+func suggestionNames(suggestions []string) []string {
+	names := make([]string, 0, len(suggestions))
+	for _, suggestion := range suggestions {
+		name, _, _ := strings.Cut(suggestion, "\t")
+		names = append(names, name)
+	}
+	return names
+}
+
+func TestCompletionNextArgSuggestsNoFiles(t *testing.T) {
+	for _, c := range completionCommands(rootCmd) {
+		if c.Hidden {
+			continue
+		}
+
+		// After an unknown command, cobra cannot find a command for the
+		// root and falls back to file completion before any
+		// ValidArgsFunction runs. Giving the root Args would make
+		// "umono xyz" print the help and exit 0 instead of an error.
+		if c == rootCmd {
+			continue
+		}
+
+		t.Run(c.CommandPath(), func(t *testing.T) {
+			args := append(strings.Fields(c.CommandPath())[1:], "x", "")
+
+			_, directive := complete(t, args...)
+			if directive&cobra.ShellCompDirectiveNoFileComp == 0 {
+				t.Fatalf("directive = %v, want ShellCompDirectiveNoFileComp bit set", directive)
+			}
+		})
+	}
+}
+
+func TestCompletionSuggestsSubcommands(t *testing.T) {
+	suggestions, _ := complete(t, "theme", "")
+
+	names := suggestionNames(suggestions)
+	for _, want := range []string{"build", "create", "dev", "install"} {
+		if !slices.Contains(names, want) {
+			t.Fatalf("suggestions %v do not contain %q", names, want)
+		}
+	}
+}
+
+func TestCompletionSuggestsShells(t *testing.T) {
+	suggestions, directive := complete(t, "completion", "")
+
+	want := []string{"bash", "zsh", "fish"}
+	if names := suggestionNames(suggestions); !reflect.DeepEqual(names, want) {
+		t.Fatalf("suggestions = %v, want %v", names, want)
+	}
+	if directive&cobra.ShellCompDirectiveNoFileComp == 0 {
+		t.Fatalf("directive = %v, want ShellCompDirectiveNoFileComp bit set", directive)
+	}
 }
