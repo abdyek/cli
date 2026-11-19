@@ -121,6 +121,33 @@ func TestProxyUsesItsOwnSession(t *testing.T) {
 	}
 }
 
+func TestProxyKeepsTheSessionCookieFromTheBrowser(t *testing.T) {
+	upstream := func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "session_id", Value: "", Path: "/admin", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "theme", Value: "dark", Path: "/"})
+		_, _ = w.Write([]byte("ok"))
+	}
+	p := newProxy(t, upstream)
+	for _, path := range []string{"/about", "/admin/logout"} {
+		resp, _ := get(t, p, path, http.Header{"Cookie": {"session_id=mine"}})
+		cookies := resp.Cookies()
+		if len(cookies) != 1 {
+			t.Fatalf("%s: cookies = %v, want 1, Set-Cookie = %v", path, cookies, resp.Header.Values("Set-Cookie"))
+		}
+		if cookies[0].Name != "theme" {
+			t.Fatalf("%s: cookie name = %q, want %q, Set-Cookie = %v", path, cookies[0].Name, "theme", resp.Header.Values("Set-Cookie"))
+		}
+		if cookies[0].Value != "dark" {
+			t.Fatalf("%s: theme cookie = %q, want %q, Set-Cookie = %v", path, cookies[0].Value, "dark", resp.Header.Values("Set-Cookie"))
+		}
+		for _, c := range cookies {
+			if c.Name == "session_id" {
+				t.Fatalf("%s: cookie %q = %q, want no cookie of the browser, Set-Cookie = %v", path, c.Name, c.Value, resp.Header.Values("Set-Cookie"))
+			}
+		}
+	}
+}
+
 func TestProxyDoesNotLogInForPublicPages(t *testing.T) {
 	f := &fakeUmono{}
 	p := newProxy(t, f.ServeHTTP)
