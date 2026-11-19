@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -336,6 +337,9 @@ func TestInstallCLIOutdated(t *testing.T) {
 		_, err := Install(proj, file, opts)
 		if !errors.Is(err, ErrCLIOutdated) {
 			t.Fatalf("Install opts=%+v err = %v, want ErrCLIOutdated", opts, err)
+		}
+		if !strings.HasSuffix(err.Error(), "; upgrade the CLI: https://docs.umono.dev/getting-started/installation/#update-the-cli") {
+			t.Fatalf("Install opts=%+v err = %v, want error to end with %q", opts, err, "; upgrade the CLI: https://docs.umono.dev/getting-started/installation/#update-the-cli")
 		}
 		noThemes(t, proj)
 	}
