@@ -117,11 +117,38 @@ func withoutSessionCookie(h http.Header) {
 	h.Set("Cookie", strings.Join(parts, "; "))
 }
 
+// withoutSessionSetCookie drops the session_id cookie of .dev/server from
+// the Set-Cookie lines of h, keeping every other cookie in its order. The
+// session_id cookie of .dev/server is shared with the other Umono sites on
+// localhost, so it never goes to the browser, and the proxy never deletes
+// the browser's cookie either.
+func withoutSessionSetCookie(h http.Header) {
+	values := h.Values("Set-Cookie")
+	if len(values) == 0 {
+		return
+	}
+	kept := make([]string, 0, len(values))
+	for _, v := range values {
+		name := strings.TrimSpace(strings.SplitN(v, ";", 2)[0])
+		name = strings.TrimSpace(strings.SplitN(name, "=", 2)[0])
+		if name == sessionCookie {
+			continue
+		}
+		kept = append(kept, v)
+	}
+	h.Del("Set-Cookie")
+	for _, v := range kept {
+		h.Add("Set-Cookie", v)
+	}
+}
+
 // modifyResponse adds connect-src 'self' to the CSP, which the SSE of live
 // reload needs, and the client script to an HTML page with a script-src
 // nonce. A changed body gets its Content-Length and loses its ETag. A
-// response that did not take the proxy's session logs in again.
+// response that did not take the proxy's session logs in again. It drops
+// the session_id cookie of .dev/server from the response's Set-Cookie lines.
 func (p *Proxy) modifyResponse(resp *http.Response) error {
+	withoutSessionSetCookie(resp.Header)
 	if value, ok := resp.Request.Context().Value(sessionKey{}).(string); ok && loggedOut(resp) {
 		p.session.forget(value)
 		toAdmin(resp)
