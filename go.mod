@@ -2,7 +2,7 @@ module github.com/umono-cms/cli
 
 go 1.26.3
 
-toolchain go1.26.6
+toolchain go1.26.11
 
 require (
 	github.com/google/go-github/v68 v68.0.0
