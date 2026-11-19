@@ -1,6 +1,9 @@
 package compatibility
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestIsVersionCompatible(t *testing.T) {
 	tests := []struct {
@@ -59,5 +62,16 @@ func TestParseVersion(t *testing.T) {
 				t.Errorf("parseVersion(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestFormatIncompatibleErrorGivesTheDocsAddress(t *testing.T) {
+	result := &CheckResult{CLIVersion: "v0.3.0", MinCLIVersion: "v0.4.0", UmonoVersion: "v0.10.0"}
+
+	want := "Upgrade the CLI to install this version of Umono:\n  → https://docs.umono.dev/getting-started/installation/#update-the-cli\n"
+
+	got := FormatIncompatibleError(result)
+	if !strings.Contains(got, want) {
+		t.Errorf("FormatIncompatibleError(result) = %q, want it to contain %q", got, want)
 	}
 }
