@@ -8,12 +8,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/umono-cms/cli/internal/compatibility"
 	"github.com/umono-cms/cli/internal/umonoproject"
 	"github.com/umono-cms/themecore"
 )
 
 var (
-	ErrCLIOutdated      = errors.New("the CLI is out of date and cannot verify this theme; upgrade the CLI")
+	ErrCLIOutdated      = errors.New("the CLI is out of date and cannot verify this theme")
 	ErrAlreadyInstalled = errors.New("the theme is already installed; use --force to reinstall it")
 	ErrIncompatibleAPI  = errors.New("the theme's Theme API version is outside the range of this Umono; use --allow-incompatible-api to install it anyway")
 )
@@ -67,7 +68,7 @@ func Install(projectDir, file string, opts Options) (Result, error) {
 		return Result{}, err
 	}
 	if built.ThemeAPIVersion > themecore.ThemeAPICurrent() {
-		return Result{}, fmt.Errorf("%w: theme-api-version is %d, the CLI supports up to %d", ErrCLIOutdated, built.ThemeAPIVersion, themecore.ThemeAPICurrent())
+		return Result{}, fmt.Errorf("%w: theme-api-version is %d, the CLI supports up to %d; upgrade the CLI: %s", ErrCLIOutdated, built.ThemeAPIVersion, themecore.ThemeAPICurrent(), compatibility.CLIUpgradeURL)
 	}
 	if _, err := themecore.CheckPackage(p); err != nil {
 		return Result{}, err
