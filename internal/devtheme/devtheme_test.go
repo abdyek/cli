@@ -161,6 +161,24 @@ func TestSyncReportsAFailedCheck(t *testing.T) {
 	}
 }
 
+func TestSyncReportsAnOutdatedContract(t *testing.T) {
+	projectDir, serverDir := newProject(t)
+
+	writeFile(t, filepath.Join(projectDir, ".dev", "contracts", "umono", "page", "v0.1.toml"), fixture(t, "page-outdated.toml"))
+
+	state, err := Sync(context.Background(), projectDir, serverDir, noRegistry, now)
+	if err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if state.Err == nil {
+		t.Fatalf("state.Err = nil, want non-nil")
+	}
+	want := "the CLI is out of date and cannot read the theme's contract; upgrade the CLI: https://docs.umono.dev/getting-started/installation/#update-the-cli"
+	if state.Err.Error() != want {
+		t.Fatalf("state.Err = %q, want %q", state.Err, want)
+	}
+}
+
 func TestSyncFetchesAMissingContract(t *testing.T) {
 	projectDir, serverDir := newProject(t)
 
