@@ -16,6 +16,7 @@ import (
 
 	"github.com/tdewolff/parse/v2"
 	"github.com/tdewolff/parse/v2/css"
+	"github.com/umono-cms/cli/internal/compatibility"
 	"github.com/umono-cms/themecore"
 )
 
@@ -58,7 +59,7 @@ func Build(ctx context.Context, dir string, r Registry, now time.Time) (BuildRes
 	}
 	p, report, err := themecore.CheckSource(dir, contract)
 	if err != nil {
-		return BuildResult{}, err
+		return BuildResult{}, compatibility.OutdatedContract(err)
 	}
 	source, err := os.ReadFile(filepath.Join(dir, "assets", "theme.css"))
 	if err != nil {

@@ -142,6 +142,26 @@ func TestBuild(t *testing.T) {
 	}
 }
 
+func TestBuildOutdatedContract(t *testing.T) {
+	dir := newProject(t)
+	contractDir := filepath.Join(dir, ".dev", "contracts", "umono", "page")
+	if err := os.MkdirAll(contractDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	contractPath := filepath.Join(contractDir, "v0.1.toml")
+	if err := os.WriteFile(contractPath, readTestdata(t, "page-outdated.toml"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	_, err := Build(context.Background(), dir, pageRegistry(t), now)
+	want := "the CLI is out of date and cannot read the theme's contract; upgrade the CLI: https://docs.umono.dev/getting-started/installation/#update-the-cli"
+	if err == nil {
+		t.Fatalf("Build = nil, want error %q", want)
+	}
+	if err.Error() != want {
+		t.Fatalf("Build err = %q, want %q", err, want)
+	}
+}
+
 func TestBuildSkipsEmptyDirectories(t *testing.T) {
 	dir := newProject(t)
 	if err := os.MkdirAll(filepath.Join(dir, "assets", "fonts", "empty"), 0o755); err != nil {

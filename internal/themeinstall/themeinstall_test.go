@@ -345,6 +345,26 @@ func TestInstallCLIOutdated(t *testing.T) {
 	}
 }
 
+func TestInstallOutdatedContract(t *testing.T) {
+	files := zipFiles(t, builtPackage(t))
+	contract, err := os.ReadFile(filepath.Join("..", "themeproject", "testdata", "page-outdated.toml"))
+	if err != nil {
+		t.Fatalf("ReadFile page-outdated.toml: %v", err)
+	}
+	files["contract.toml"] = contract
+	file := writeZip(t, withChecksums(t, files))
+	proj := umonoProject(t, v1JSON)
+	_, err = Install(proj, file, Options{})
+	want := "the CLI is out of date and cannot read the theme's contract; upgrade the CLI: https://docs.umono.dev/getting-started/installation/#update-the-cli"
+	if err == nil {
+		t.Fatalf("Install = nil, want error %q", want)
+	}
+	if err.Error() != want {
+		t.Fatalf("Install err = %v, want %q", err, want)
+	}
+	noThemes(t, proj)
+}
+
 func TestInstallDevDev(t *testing.T) {
 	files := zipFiles(t, builtPackage(t))
 	from := "id = " + strconv.Quote("acme/minimal")

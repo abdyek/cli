@@ -1,15 +1,33 @@
 package compatibility
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/umono-cms/cli/internal/download"
 	"github.com/umono-cms/cli/internal/version"
+	"github.com/umono-cms/themecore"
 )
 
 const CLIUpgradeURL = "https://docs.umono.dev/getting-started/installation/#update-the-cli"
+
+// ErrContractOutdated is returned when the theme's contract cannot be read
+// because the CLI is out of date. It replaces an error that wraps
+// themecore.ErrOutdated, which means the contract uses Compono syntax or a
+// component that the CLI's themecore does not know.
+var ErrContractOutdated = errors.New("the CLI is out of date and cannot read the theme's contract")
+
+// OutdatedContract translates an error that wraps themecore.ErrOutdated into
+// ErrContractOutdated with upgrade instructions. Any other error is returned
+// unchanged.
+func OutdatedContract(err error) error {
+	if errors.Is(err, themecore.ErrOutdated) {
+		return fmt.Errorf("%w; upgrade the CLI: %s", ErrContractOutdated, CLIUpgradeURL)
+	}
+	return err
+}
 
 type CheckResult struct {
 	Compatible    bool
