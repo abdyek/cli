@@ -12,6 +12,7 @@ import (
 	"github.com/umono-cms/cli/internal/download"
 	"github.com/umono-cms/cli/internal/download/downloadtest"
 	"github.com/umono-cms/cli/internal/umonoproject"
+	"github.com/umono-cms/cli/internal/version"
 	"github.com/umono-cms/themecore"
 )
 
@@ -81,6 +82,12 @@ func TestEnsureSetsTheServerUp(t *testing.T) {
 }
 
 func TestEnsureLeavesNothingOnFailure(t *testing.T) {
+	originalVersion := version.Version
+	version.Version = "0.4.0"
+	t.Cleanup(func() {
+		version.Version = originalVersion
+	})
+
 	project := t.TempDir()
 	if _, err := Ensure(project, fakeClient(t, releaseFiles("binary", "99.0.0"))); err == nil {
 		t.Fatalf("Ensure returned nil error, want non-nil")
