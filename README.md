@@ -33,6 +33,45 @@ Then restart your terminal or run:
 source ~/.bashrc  # or ~/.zshrc
 ```
 
+## Shell Completion
+
+`umono completion <shell>` prints the completion script of bash, zsh or fish. The installer does not set up completion and the CLI never edits your shell files: load the script yourself as below, then open a new terminal.
+
+The script does not hold the list of commands. It asks the CLI on every completion, so it stays up to date when the CLI is upgraded and never needs to be generated again.
+
+### bash
+
+The script needs the `bash-completion` package. Without it, the script loads, but every completion fails with `_get_comp_words_by_ref: command not found`. Install it with your package manager, for example `sudo apt install bash-completion` or `sudo dnf install bash-completion`.
+
+Then add this line to `~/.bashrc`:
+
+```bash
+source <(umono completion bash)
+```
+
+### zsh
+
+Completion must be enabled in `~/.zshrc`. If it is not, add this line first:
+
+```zsh
+autoload -U compinit; compinit
+```
+
+Then add this line after it:
+
+```zsh
+source <(umono completion zsh)
+```
+
+### fish
+
+Write the script to fish's completion directory, which fish loads by itself:
+
+```fish
+mkdir -p ~/.config/fish/completions
+umono completion fish > ~/.config/fish/completions/umono.fish
+```
+
 ## Quick Start
 
 Create a new website:
