@@ -77,15 +77,47 @@ func TestProxyLogsInToAdmin(t *testing.T) {
 	}
 }
 
-func TestProxyKeepsTheBrowserSession(t *testing.T) {
+func TestProxyUsesItsOwnSession(t *testing.T) {
 	f := &fakeUmono{}
-	p := newProxy(t, f.ServeHTTP)
-	resp, _ := get(t, p, "/admin", http.Header{"Cookie": {"session_id=mine"}})
-	if resp.StatusCode != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303", resp.StatusCode)
+	var mu sync.Mutex
+	var got []*http.Cookie
+	upstream := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/admin" {
+			mu.Lock()
+			got = r.Cookies()
+			mu.Unlock()
+		}
+		f.ServeHTTP(w, r)
 	}
-	if f.logins != 0 {
-		t.Fatalf("logins = %d, want 0", f.logins)
+	p := newProxy(t, upstream)
+	resp, body := get(t, p, "/admin", http.Header{"Cookie": {"theme=dark; session_id=mine"}})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body != "ok session1" {
+		t.Fatalf("body = %q, want %q", body, "ok session1")
+	}
+	if f.logins != 1 {
+		t.Fatalf("logins = %d, want 1", f.logins)
+	}
+	mu.Lock()
+	cookies := got
+	mu.Unlock()
+	if len(cookies) != 2 {
+		t.Fatalf("cookies = %v, want 2", cookies)
+	}
+	values := map[string]string{}
+	for _, c := range cookies {
+		values[c.Name] = c.Value
+		if c.Value == "mine" {
+			t.Fatalf("cookie %q = %q, want no cookie of the browser", c.Name, c.Value)
+		}
+	}
+	if values["theme"] != "dark" {
+		t.Fatalf("theme cookie = %q, want %q", values["theme"], "dark")
+	}
+	if values["session_id"] != "session1" {
+		t.Fatalf("session_id cookie = %q, want %q", values["session_id"], "session1")
 	}
 }
 

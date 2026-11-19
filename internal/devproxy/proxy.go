@@ -72,8 +72,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // rewrite sends the request to .dev/server with the browser's Host, so
 // Umono sees the page's own origin, and asks for an uncompressed body,
-// which the proxy can change. An /admin request without a session of the
-// browser gets the proxy's own.
+// which the proxy can change. An /admin request always gets the proxy's
+// own session, in place of the browser's session_id.
 func (p *Proxy) rewrite(pr *httputil.ProxyRequest) {
 	target := p.target.Load()
 	pr.SetURL(target)
@@ -82,15 +82,39 @@ func (p *Proxy) rewrite(pr *httputil.ProxyRequest) {
 	if !isAdmin(pr.In.URL.Path) {
 		return
 	}
-	if _, err := pr.In.Cookie(sessionCookie); err == nil {
-		return
-	}
+	withoutSessionCookie(pr.Out.Header)
 	c, err := p.session.get(pr.In.Context(), target)
 	if err != nil {
 		return
 	}
 	pr.Out.AddCookie(c)
 	pr.Out = pr.Out.WithContext(context.WithValue(pr.Out.Context(), sessionKey{}, c.Value))
+}
+
+// withoutSessionCookie drops the browser's session_id from h, keeping
+// every other cookie. It leaves one Cookie header with what is left, or
+// no Cookie header at all when nothing is left.
+func withoutSessionCookie(h http.Header) {
+	values := h.Values("Cookie")
+	h.Del("Cookie")
+	parts := []string{}
+	for _, v := range values {
+		for _, part := range strings.Split(v, ";") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			name, _, _ := strings.Cut(part, "=")
+			if name == sessionCookie {
+				continue
+			}
+			parts = append(parts, part)
+		}
+	}
+	if len(parts) == 0 {
+		return
+	}
+	h.Set("Cookie", strings.Join(parts, "; "))
 }
 
 // modifyResponse adds connect-src 'self' to the CSP, which the SSE of live

@@ -29,8 +29,8 @@ var loginClient = &http.Client{
 var errLogin = errors.New("logging in to .dev/server failed")
 
 // session is the proxy's own login to .dev/server with the account of
-// .dev/server. The browser never gets its cookie: the proxy adds it to the
-// /admin requests that have no session of their own.
+// .dev/server. The browser never gets its cookie: the proxy adds it to
+// every /admin request in place of the browser's session.
 type session struct {
 	mu     sync.Mutex
 	cookie *http.Cookie
