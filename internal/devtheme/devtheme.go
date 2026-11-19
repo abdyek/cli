@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/umono-cms/cli/internal/compatibility"
 	"github.com/umono-cms/cli/internal/themeproject"
 	"github.com/umono-cms/themecore"
 )
@@ -64,7 +65,7 @@ func Sync(ctx context.Context, projectDir, serverDir string, r themeproject.Regi
 
 	version := themecore.ThemeAPICurrent()
 	if _, report, err := themecore.CheckSource(projectDir, contract); err != nil {
-		state.Err = err
+		state.Err = compatibility.OutdatedContract(err)
 	} else {
 		version = report.Version
 		state.Warnings = report.Warnings

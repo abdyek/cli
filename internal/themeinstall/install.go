@@ -71,7 +71,7 @@ func Install(projectDir, file string, opts Options) (Result, error) {
 		return Result{}, fmt.Errorf("%w: theme-api-version is %d, the CLI supports up to %d; upgrade the CLI: %s", ErrCLIOutdated, built.ThemeAPIVersion, themecore.ThemeAPICurrent(), compatibility.CLIUpgradeURL)
 	}
 	if _, err := themecore.CheckPackage(p); err != nil {
-		return Result{}, err
+		return Result{}, compatibility.OutdatedContract(err)
 	}
 	rel := filepath.Join(filepath.FromSlash(built.ID), built.Version)
 	dir := filepath.Join(projectDir, "themes", rel)
