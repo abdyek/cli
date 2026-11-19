@@ -14,6 +14,7 @@ import (
 	"github.com/umono-cms/cli/internal/download"
 	"github.com/umono-cms/cli/internal/download/downloadtest"
 	"github.com/umono-cms/cli/internal/umonoproject"
+	"github.com/umono-cms/cli/internal/version"
 )
 
 const builtTemplate = `schema = 'https://umono.dev/schemas/theme-built/v1'
@@ -387,6 +388,12 @@ func TestCreateWithDownloadsTheLatestRelease(t *testing.T) {
 }
 
 func TestCreateWithStopsOnAnOldCLI(t *testing.T) {
+	originalVersion := version.Version
+	version.Version = "0.4.0"
+	t.Cleanup(func() {
+		version.Version = originalVersion
+	})
+
 	srv := downloadtest.New(t, "v0.9.0", releaseFiles("99.0.0"))
 	client, err := download.NewClientWithURL(srv.URL)
 	if err != nil {

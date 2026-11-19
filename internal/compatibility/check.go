@@ -3,6 +3,9 @@ package compatibility
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -10,6 +13,14 @@ import (
 	"github.com/umono-cms/cli/internal/version"
 	"github.com/umono-cms/themecore"
 )
+
+// releaseVersion matches a release version, MAJOR.MINOR.PATCH with an
+// optional leading "v" and nothing else.
+var releaseVersion = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+$`)
+
+// warnings is where a development build writes that it skips the minimum
+// CLI version check; tests replace it.
+var warnings io.Writer = os.Stderr
 
 const CLIUpgradeURL = "https://docs.umono.dev/getting-started/installation/#update-the-cli"
 
@@ -47,7 +58,7 @@ func Check(client *download.Client) (*CheckResult, error) {
 		return nil, fmt.Errorf("failed to get release info: %w", err)
 	}
 
-	compatible := isVersionCompatible(version.Version, manifest.MinCLIVersion)
+	compatible := compatibleWith(manifest.MinCLIVersion, releaseInfo.Version)
 
 	return &CheckResult{
 		Compatible:    compatible,
@@ -63,7 +74,7 @@ func CheckForVersion(client *download.Client, umonoVersion string) (*CheckResult
 		return nil, fmt.Errorf("failed to check compatibility: %w", err)
 	}
 
-	compatible := isVersionCompatible(version.Version, manifest.MinCLIVersion)
+	compatible := compatibleWith(manifest.MinCLIVersion, umonoVersion)
 
 	return &CheckResult{
 		Compatible:    compatible,
@@ -83,6 +94,25 @@ Umono version:        %s
 Upgrade the CLI to install this version of Umono:
   → %s
 `, result.CLIVersion, result.MinCLIVersion, result.UmonoVersion, CLIUpgradeURL)
+}
+
+// isRelease reports whether v is a release version, MAJOR.MINOR.PATCH with an
+// optional leading "v" and nothing else. Any other version, like 0.0.0-dev, a
+// pseudo-version or a version with a "+dirty" suffix, is a development build.
+func isRelease(v string) bool {
+	return releaseVersion.MatchString(v)
+}
+
+// compatibleWith reports whether the CLI is compatible with the minimum CLI
+// version minVersion of the Umono release umonoVersion. A development build
+// skips the check and is always compatible.
+func compatibleWith(minVersion, umonoVersion string) bool {
+	if !isRelease(version.Version) {
+		fmt.Fprintf(warnings, "warning: development build %s skips the minimum CLI version check (Umono %s requires %s)\n", version.Display(), umonoVersion, minVersion)
+		return true
+	}
+
+	return isVersionCompatible(version.Version, minVersion)
 }
 
 func isVersionCompatible(cliVersion, minVersion string) bool {
