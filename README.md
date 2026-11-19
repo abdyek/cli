@@ -41,7 +41,7 @@ The script does not hold the list of commands. It asks the CLI on every completi
 
 ### bash
 
-The script needs the `bash-completion` package. Without it, the script loads, but every completion fails with `_get_comp_words_by_ref: command not found`. Install it with your package manager, for example `sudo apt install bash-completion`, `sudo dnf install bash-completion` or, on macOS, `brew install bash-completion@2`.
+The script needs the `bash-completion` package. Without it, the script loads, but every completion fails with `_get_comp_words_by_ref: command not found`. Install it with your package manager, for example `sudo apt install bash-completion` or `sudo dnf install bash-completion`.
 
 Then add this line to `~/.bashrc`:
 
