@@ -40,12 +40,12 @@ github.com/tdewolff/parse/v2 v2.8.16 h1:bLk5svUOQRkW/Y2SJ+DeENSIkZBcTIkq+Atyv5D8
 github.com/tdewolff/parse/v2 v2.8.16/go.mod h1:XdsoSFThlVIRIajAuqz1evNY7bagZS8LBOPA3aVopwQ=
 github.com/tdewolff/test v1.0.12 h1:7F21DqIajswxuche0geHdrUZRCWE4oko4b7bcmkkrxk=
 github.com/tdewolff/test v1.0.12/go.mod h1:XPuWBzvdUzhCuxWO1ojpXsyzsA5bFoS3tO/Q3kFuTG8=
-github.com/umono-cms/compono v0.7.1 h1:4fxu9F8zf0DViPMXkQWW3tX0/SyHqxkXosI17jZnb1c=
-github.com/umono-cms/compono v0.7.1/go.mod h1:xmv1PX8nrUAczVM/LYgGRC1mn9ryeutfA76oJNuaHNI=
+github.com/umono-cms/compono v0.8.0 h1:/CPZcY4UZzhSrW3y3yhnyT/OWOdanXlXcFk4t5dKfHI=
+github.com/umono-cms/compono v0.8.0/go.mod h1:xmv1PX8nrUAczVM/LYgGRC1mn9ryeutfA76oJNuaHNI=
 github.com/umono-cms/crypto v0.1.0 h1:xKKlLKxroXVIf4oUecWneaTh1NX3TuO3QKaMwMUt9dY=
 github.com/umono-cms/crypto v0.1.0/go.mod h1:SPx8bAPC9Z2GzcwJTti4vO2yqeziTRzb0S91BGCFn5g=
-github.com/umono-cms/themecore v0.2.0 h1:ORX7FcvUr4TPgTmyQDiuYVFFdksW4lfSCgKPGh4leyg=
-github.com/umono-cms/themecore v0.2.0/go.mod h1:hcSQ8/TK1y1UXph3uFmU8fHk7qmMhPAf/5C93brjmoI=
+github.com/umono-cms/themecore v0.3.0 h1:Futp/n9c1rxyJV1EjFiRXD19xewiH4G4nVREmegwzXM=
+github.com/umono-cms/themecore v0.3.0/go.mod h1:ZI/3OBLosHP+TPnj1fGVLaXaqDJv7A+ikkpmSAPIjdM=
 go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
 golang.org/x/crypto v0.50.0 h1:zO47/JPrL6vsNkINmLoo/PH1gcxpls50DNogFvB5ZGI=
 golang.org/x/crypto v0.50.0/go.mod h1:3muZ7vA7PBCE6xgPX7nkzzjiUq87kRItoJQM1Yo8S+Q=
