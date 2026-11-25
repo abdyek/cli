@@ -30,6 +30,10 @@ it to the latest release and keeps its database.`,
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		r, err := themeproject.RegistryFromEnv()
+		if err != nil {
+			return err
+		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		return themedev.Run(ctx, themedev.Options{
@@ -37,7 +41,7 @@ it to the latest release and keeps its database.`,
 			Port:         themeDevPort,
 			UpdateServer: themeDevUpdateServer,
 			Client:       download.NewClient(),
-			Registry:     themeproject.DefaultRegistry,
+			Registry:     r,
 			Out:          cmd.OutOrStdout(),
 			Interval:     300 * time.Millisecond,
 		})
