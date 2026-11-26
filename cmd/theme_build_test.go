@@ -24,12 +24,19 @@ func pageContractRegistry(t *testing.T) themeproject.Registry {
 	if err != nil {
 		t.Fatalf("read page-v0.1.toml: %v", err)
 	}
+	signature, err := os.ReadFile(filepath.Join("..", "internal", "themeproject", "testdata", "page-v0.1.toml.minisig"))
+	if err != nil {
+		t.Fatalf("read page-v0.1.toml.minisig: %v", err)
+	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/registry/v1/contracts/umono/page/v0.1" {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			_, _ = w.Write(body)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			_, _ = w.Write(signature)
+		default:
 			http.NotFound(w, r)
-			return
 		}
-		_, _ = w.Write(body)
 	}))
 	t.Cleanup(srv.Close)
 	return themeproject.Registry{BaseURL: srv.URL, Client: srv.Client()}
