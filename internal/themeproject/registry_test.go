@@ -1,13 +1,19 @@
 package themeproject
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+
+	"github.com/umono-cms/themecore"
 )
 
 // TestParseRegistryURL checks that ParseRegistryURL accepts only http and
@@ -137,4 +143,183 @@ func TestRegistryErrorsNameTheHost(t *testing.T) {
 	if strings.Contains(err.Error(), "umono.dev") {
 		t.Fatalf("EnsureContract() err = %q, want it to not contain %q", err, "umono.dev")
 	}
+}
+
+// TestEnsureContractVerifiesSignature checks that EnsureContract fetches the
+// contract and the signature next to it, verifies the signature against the
+// contract and writes the contract to the cache when the signature is good.
+func TestEnsureContractVerifiesSignature(t *testing.T) {
+	contract := readTestdata(t, "page-v0.1.toml")
+	signature := readTestdata(t, "page-v0.1.toml.minisig")
+	var signatureRequests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			_, _ = w.Write(contract)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			signatureRequests.Add(1)
+			_, _ = w.Write(signature)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	root := t.TempDir()
+	r := Registry{BaseURL: srv.URL, Client: srv.Client()}
+	cachePath := filepath.Join(root, ".dev", "contracts", "umono", "page", "v0.1.toml")
+
+	path, err := EnsureContract(context.Background(), root, "umono/page@v0.1", r)
+	if err != nil {
+		t.Fatalf("EnsureContract() err = %v, want nil", err)
+	}
+	if path != cachePath {
+		t.Fatalf("path = %q, want %q", path, cachePath)
+	}
+	got, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatalf("read cache file: %v", err)
+	}
+	if !bytes.Equal(got, contract) {
+		t.Fatalf("cache contents = %q, want %q", got, contract)
+	}
+	if signatureRequests.Load() == 0 {
+		t.Fatalf("signature requests = %d, want at least 1", signatureRequests.Load())
+	}
+}
+
+// TestEnsureContractBadSignature checks that EnsureContract refuses a
+// contract whose signature does not verify: the error names the registry, it
+// is not a network error, and neither the contract nor its directory is
+// written to the cache.
+func TestEnsureContractBadSignature(t *testing.T) {
+	contract := readTestdata(t, "page-v0.1.toml")
+	signature := corruptSignature(t, readTestdata(t, "page-v0.1.toml.minisig"))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			_, _ = w.Write(contract)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			_, _ = w.Write(signature)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	root := t.TempDir()
+	r := Registry{BaseURL: srv.URL, Client: srv.Client()}
+	cachePath := filepath.Join(root, ".dev", "contracts", "umono", "page", "v0.1.toml")
+
+	_, err := EnsureContract(context.Background(), root, "umono/page@v0.1", r)
+	if err == nil {
+		t.Fatalf("EnsureContract() err = nil, want error")
+	}
+	if !errors.Is(err, ErrContractNotVerified) {
+		t.Fatalf("EnsureContract() err = %v, want ErrContractNotVerified", err)
+	}
+	if !errors.Is(err, themecore.ErrContractSignature) {
+		t.Fatalf("EnsureContract() err = %v, want themecore.ErrContractSignature", err)
+	}
+	if errors.Is(err, ErrRegistryUnreachable) {
+		t.Fatalf("EnsureContract() err = %v, want it to not be ErrRegistryUnreachable", err)
+	}
+	if !strings.Contains(err.Error(), r.Host()) {
+		t.Fatalf("EnsureContract() err = %q, want it to contain %q", err, r.Host())
+	}
+	if _, err := os.Stat(cachePath); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("os.Stat(%s) err = %v, want fs.ErrNotExist", cachePath, err)
+	}
+	devDir := filepath.Join(root, ".dev")
+	if _, err := os.Stat(devDir); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("os.Stat(%s) err = %v, want fs.ErrNotExist", devDir, err)
+	}
+}
+
+// TestEnsureContractSignatureNotFound checks that EnsureContract reports a
+// contract the registry serves without a published signature as not published
+// and writes nothing to the cache.
+func TestEnsureContractSignatureNotFound(t *testing.T) {
+	contract := readTestdata(t, "page-v0.1.toml")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			_, _ = w.Write(contract)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	root := t.TempDir()
+	r := Registry{BaseURL: srv.URL, Client: srv.Client()}
+	cachePath := filepath.Join(root, ".dev", "contracts", "umono", "page", "v0.1.toml")
+
+	_, err := EnsureContract(context.Background(), root, "umono/page@v0.1", r)
+	if !errors.Is(err, ErrContractNotPublished) {
+		t.Fatalf("EnsureContract() err = %v, want ErrContractNotPublished", err)
+	}
+	if _, err := os.Stat(cachePath); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("os.Stat(%s) err = %v, want fs.ErrNotExist", cachePath, err)
+	}
+}
+
+// TestEnsureContractCachedIsNotVerified checks that EnsureContract returns a
+// cached contract as it is: it never fetches it again, so a contract that was
+// never verified stays in the cache.
+func TestEnsureContractCachedIsNotVerified(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("unexpected request to %s", r.URL.Path)
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	root := t.TempDir()
+	cachePath := filepath.Join(root, ".dev", "contracts", "umono", "page", "v0.1.toml")
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(cachePath, []byte("cached"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	r := Registry{BaseURL: srv.URL, Client: srv.Client()}
+	path, err := EnsureContract(context.Background(), root, "umono/page@v0.1", r)
+	if err != nil {
+		t.Fatalf("EnsureContract() err = %v, want nil", err)
+	}
+	if path != cachePath {
+		t.Fatalf("path = %q, want %q", path, cachePath)
+	}
+	got, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatalf("read cache file: %v", err)
+	}
+	if string(got) != "cached" {
+		t.Fatalf("cache contents = %q, want %q", got, "cached")
+	}
+}
+
+// corruptSignature returns sig with one character of its last line, the
+// signature over the trusted comment, changed, so that the signature does not
+// verify against the contract anymore.
+func corruptSignature(t *testing.T, sig []byte) []byte {
+	t.Helper()
+	lines := strings.Split(strings.TrimSuffix(string(sig), "\n"), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("signature has %d lines, want 4", len(lines))
+	}
+	last := lines[len(lines)-1]
+	data := strings.TrimRight(last, "=")
+	if len(data) == 0 {
+		t.Fatalf("last line of the signature is empty")
+	}
+	i := len(data) / 2
+	if data[i] == 'A' {
+		last = last[:i] + "B" + last[i+1:]
+	} else {
+		last = last[:i] + "A" + last[i+1:]
+	}
+	lines[len(lines)-1] = last
+	return []byte(strings.Join(lines, "\n") + "\n")
 }
