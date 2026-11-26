@@ -1,6 +1,7 @@
 package themeproject
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io/fs"
@@ -211,15 +212,20 @@ func TestCreateValidatesFirst(t *testing.T) {
 }
 
 func TestEnsureContract(t *testing.T) {
+	contract := readTestdata(t, "page-v0.1.toml")
+	signature := readTestdata(t, "page-v0.1.toml.minisig")
 	count := 0
-	body := "first"
+	body := contract
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		count++
-		if r.URL.Path != "/registry/v1/contracts/umono/page/v0.1" {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			count++
+			_, _ = w.Write(body)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			_, _ = w.Write(signature)
+		default:
 			http.NotFound(w, r)
-			return
 		}
-		_, _ = w.Write([]byte(body))
 	}))
 	t.Cleanup(srv.Close)
 
@@ -238,14 +244,14 @@ func TestEnsureContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read cache file: %v", err)
 	}
-	if string(got) != "first" {
-		t.Fatalf("cache contents = %q, want %q", got, "first")
+	if !bytes.Equal(got, contract) {
+		t.Fatalf("cache contents = %q, want %q", got, contract)
 	}
 	if count != 1 {
 		t.Fatalf("count after first call = %d, want 1", count)
 	}
 
-	body = "second"
+	body = []byte("second")
 	path, err = EnsureContract(context.Background(), root, "umono/page@v0.1", r)
 	if err != nil {
 		t.Fatalf("EnsureContract second call: %v", err)
@@ -257,8 +263,8 @@ func TestEnsureContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read cache file: %v", err)
 	}
-	if string(got) != "first" {
-		t.Fatalf("cache contents after second call = %q, want %q", got, "first")
+	if !bytes.Equal(got, contract) {
+		t.Fatalf("cache contents after second call = %q, want %q", got, contract)
 	}
 	if count != 1 {
 		t.Fatalf("count after second call = %d, want 1", count)
@@ -284,10 +290,19 @@ func TestEnsureContractNotPublished(t *testing.T) {
 }
 
 func TestEnsureContractUserAgent(t *testing.T) {
-	var ua string
+	contract := readTestdata(t, "page-v0.1.toml")
+	signature := readTestdata(t, "page-v0.1.toml.minisig")
+	var agents []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ua = r.Header.Get("User-Agent")
-		_, _ = w.Write([]byte("x"))
+		agents = append(agents, r.Header.Get("User-Agent"))
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			_, _ = w.Write(contract)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			_, _ = w.Write(signature)
+		default:
+			http.NotFound(w, r)
+		}
 	}))
 	t.Cleanup(srv.Close)
 
@@ -296,8 +311,13 @@ func TestEnsureContractUserAgent(t *testing.T) {
 	if _, err := EnsureContract(context.Background(), root, "umono/page@v0.1", r); err != nil {
 		t.Fatalf("EnsureContract: %v", err)
 	}
-	if ua != "Umono" {
-		t.Fatalf("User-Agent = %q, want %q", ua, "Umono")
+	if len(agents) != 2 {
+		t.Fatalf("requests = %d, want 2", len(agents))
+	}
+	for i, ua := range agents {
+		if ua != "Umono" {
+			t.Fatalf("User-Agent of request %d = %q, want %q", i, ua, "Umono")
+		}
 	}
 }
 

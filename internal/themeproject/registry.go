@@ -13,17 +13,23 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/umono-cms/themecore"
 )
 
 var (
 	ErrInvalidContractRef   = errors.New("invalid contract reference")
 	ErrContractNotPublished = errors.New("contract is not published on the registry")
+	ErrContractNotVerified  = errors.New("the contract the registry serves is not the published contract")
 	ErrRegistryUnreachable  = errors.New("registry is unreachable")
 	ErrRegistryURL          = errors.New("UMONO_REGISTRY must be an http or https root URL without a query or fragment")
 )
 
 // maxContractSize bounds a fetched contract.
 const maxContractSize = 1 << 20
+
+// maxSignatureSize is the most the CLI reads of a signature response, as Umono does.
+const maxSignatureSize = 4 << 10
 
 // contractRef is org/id@vMAJOR.MINOR. Groups 1, 3 and 5 are the org, the id
 // and the version, the parts of the registry URL and of the cache path.
@@ -90,7 +96,9 @@ func (r Registry) Host() string {
 // EnsureContract returns the cache path of ref in projectDir,
 // .dev/contracts/{org}/{id}/v{major}.{minor}.toml. The file is fetched from r
 // only when it is missing: contracts are immutable, so a cached file never
-// changes.
+// changes. A fetched contract is written to the cache only when its signature,
+// fetched next to it, verifies: the registry must serve the published
+// contract, not another one.
 func EnsureContract(ctx context.Context, projectDir, ref string, r Registry) (string, error) {
 	m := contractRef.FindStringSubmatch(ref)
 	if m == nil {
@@ -103,9 +111,17 @@ func EnsureContract(ctx context.Context, projectDir, ref string, r Registry) (st
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return "", err
 	}
-	b, err := r.fetch(ctx, org+"/"+id+"/"+version)
+	contract := org + "/" + id + "/" + version
+	b, err := r.fetch(ctx, contract, "")
 	if err != nil {
 		return "", err
+	}
+	sig, err := r.fetch(ctx, contract, ".minisig")
+	if err != nil {
+		return "", err
+	}
+	if err := themecore.VerifyContractSignature(b, sig, ref); err != nil {
+		return "", fmt.Errorf("%s: %w (%s): %w", ref, ErrContractNotVerified, r.Host(), err)
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", err
@@ -116,10 +132,11 @@ func EnsureContract(ctx context.Context, projectDir, ref string, r Registry) (st
 	return path, nil
 }
 
-// fetch gets a contract with the least information: a GET with the
-// version-less User-Agent Umono.
-func (r Registry) fetch(ctx context.Context, contract string) ([]byte, error) {
-	url := r.BaseURL + "/registry/v1/contracts/" + contract
+// fetch gets a contract or its signature with the least information: a GET
+// with the version-less User-Agent Umono. ext is the extension of the file,
+// "" for the contract and ".minisig" for its signature.
+func (r Registry) fetch(ctx context.Context, contract, ext string) ([]byte, error) {
+	url := r.BaseURL + "/registry/v1/contracts/" + contract + ext
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -136,6 +153,13 @@ func (r Registry) fetch(ctx context.Context, contract string) ([]byte, error) {
 		return nil, fmt.Errorf("%s: %w (%s)", contract, ErrContractNotPublished, r.Host())
 	default:
 		return nil, fmt.Errorf("%w (%s): %s", ErrRegistryUnreachable, r.Host(), resp.Status)
+	}
+	if ext == ".minisig" {
+		b, err := io.ReadAll(io.LimitReader(resp.Body, maxSignatureSize))
+		if err != nil {
+			return nil, fmt.Errorf("%w (%s): %v", ErrRegistryUnreachable, r.Host(), err)
+		}
+		return b, nil
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxContractSize+1))
 	if err != nil {
