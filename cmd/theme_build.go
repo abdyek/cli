@@ -20,7 +20,11 @@ var themeBuildCmd = &cobra.Command{
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runThemeBuild(cmd.Context(), ".", cmd.OutOrStdout(), themeproject.DefaultRegistry, time.Now())
+		r, err := themeproject.RegistryFromEnv()
+		if err != nil {
+			return err
+		}
+		return runThemeBuild(cmd.Context(), ".", cmd.OutOrStdout(), r, time.Now())
 	},
 }
 

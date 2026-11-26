@@ -7,16 +7,19 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
 var (
 	ErrInvalidContractRef   = errors.New("invalid contract reference")
-	ErrContractNotPublished = errors.New("contract is not published on umono.dev")
-	ErrRegistryUnreachable  = errors.New("umono.dev is unreachable")
+	ErrContractNotPublished = errors.New("contract is not published on the registry")
+	ErrRegistryUnreachable  = errors.New("registry is unreachable")
+	ErrRegistryURL          = errors.New("UMONO_REGISTRY must be an http or https root URL without a query or fragment")
 )
 
 // maxContractSize bounds a fetched contract.
@@ -32,8 +35,57 @@ type Registry struct {
 	Client  *http.Client
 }
 
-// DefaultRegistry is umono.dev, the only registry in v0.9.
+// DefaultRegistry is umono.dev, the official registry, used when UMONO_REGISTRY is not set.
 var DefaultRegistry = Registry{BaseURL: "https://umono.dev", Client: &http.Client{Timeout: 30 * time.Second}}
+
+// ParseRegistryURL checks the value of UMONO_REGISTRY, the root URL of a
+// mirror that replaces umono.dev.
+func ParseRegistryURL(v string) (string, error) {
+	u, err := url.Parse(v)
+	if err != nil {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	if u.RawQuery != "" || u.ForceQuery {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	if u.Fragment != "" || strings.Contains(v, "#") {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	if u.User != nil {
+		return "", fmt.Errorf("%w: %q", ErrRegistryURL, v)
+	}
+	return strings.TrimRight(v, "/"), nil
+}
+
+// RegistryFromEnv returns the registry of UMONO_REGISTRY, DefaultRegistry when
+// the variable is not set. A set value replaces umono.dev entirely.
+func RegistryFromEnv() (Registry, error) {
+	v, ok := os.LookupEnv("UMONO_REGISTRY")
+	if !ok {
+		return DefaultRegistry, nil
+	}
+	base, err := ParseRegistryURL(v)
+	if err != nil {
+		return Registry{}, err
+	}
+	return Registry{BaseURL: base, Client: DefaultRegistry.Client}, nil
+}
+
+// Host returns the host of the registry, with its port if it has one, as the
+// errors name it.
+func (r Registry) Host() string {
+	u, err := url.Parse(r.BaseURL)
+	if err != nil {
+		return r.BaseURL
+	}
+	return u.Host
+}
 
 // EnsureContract returns the cache path of ref in projectDir,
 // .dev/contracts/{org}/{id}/v{major}.{minor}.toml. The file is fetched from r
@@ -75,19 +127,19 @@ func (r Registry) fetch(ctx context.Context, contract string) ([]byte, error) {
 	req.Header.Set("User-Agent", "Umono")
 	resp, err := r.Client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrRegistryUnreachable, err)
+		return nil, fmt.Errorf("%w (%s): %v", ErrRegistryUnreachable, r.Host(), err)
 	}
 	defer resp.Body.Close()
 	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusNotFound:
-		return nil, fmt.Errorf("%s: %w", contract, ErrContractNotPublished)
+		return nil, fmt.Errorf("%s: %w (%s)", contract, ErrContractNotPublished, r.Host())
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrRegistryUnreachable, resp.Status)
+		return nil, fmt.Errorf("%w (%s): %s", ErrRegistryUnreachable, r.Host(), resp.Status)
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, maxContractSize+1))
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrRegistryUnreachable, err)
+		return nil, fmt.Errorf("%w (%s): %v", ErrRegistryUnreachable, r.Host(), err)
 	}
 	if len(b) > maxContractSize {
 		return nil, fmt.Errorf("%s: contract is larger than %d bytes", contract, maxContractSize)

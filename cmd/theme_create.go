@@ -35,6 +35,10 @@ func init() {
 }
 
 func runThemeCreateCmd(cmd *cobra.Command, args []string) error {
+	r, err := themeproject.RegistryFromEnv()
+	if err != nil {
+		return err
+	}
 	given := map[string]string{}
 	for _, f := range createFields {
 		if cmd.Flags().Changed(f.flag) {
@@ -43,7 +47,7 @@ func runThemeCreateCmd(cmd *cobra.Command, args []string) error {
 	}
 	noInput, _ := cmd.Flags().GetBool("no-input")
 	interactive := !noInput && term.IsTerminal(int(os.Stdin.Fd()))
-	return runThemeCreate(cmd.Context(), args[0], given, interactive, os.Stdin, cmd.OutOrStdout(), themeproject.DefaultRegistry)
+	return runThemeCreate(cmd.Context(), args[0], given, interactive, os.Stdin, cmd.OutOrStdout(), r)
 }
 
 // createField is a question of umono theme create. The flag of the same name
