@@ -187,12 +187,16 @@ func TestSyncFetchesAMissingContract(t *testing.T) {
 	}
 
 	body := fixture(t, "page-v0.1.toml")
+	signature := fixture(t, "page-v0.1.toml.minisig")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/registry/v1/contracts/umono/page/v0.1" {
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			w.Write(body)
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			w.Write(signature)
+		default:
 			http.NotFound(w, r)
-			return
 		}
-		w.Write(body)
 	}))
 	defer srv.Close()
 

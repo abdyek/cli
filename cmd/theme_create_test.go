@@ -8,24 +8,52 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/umono-cms/cli/internal/themeproject"
 )
 
+// contractPath returns the path of a file of the page contract in the
+// repository. It is resolved from the directory of this source file, because
+// the tests change the working directory.
+func contractPath(t *testing.T, name string) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatalf("runtime.Caller(0) failed")
+	}
+	return filepath.Join(filepath.Dir(file), "..", "internal", "themeproject", "testdata", name)
+}
+
 func newRegistry(t *testing.T, status int) themeproject.Registry {
 	t.Helper()
+	contract, err := os.ReadFile(contractPath(t, "page-v0.1.toml"))
+	if err != nil {
+		t.Fatalf("read page-v0.1.toml: %v", err)
+	}
+	signature, err := os.ReadFile(contractPath(t, "page-v0.1.toml.minisig"))
+	if err != nil {
+		t.Fatalf("read page-v0.1.toml.minisig: %v", err)
+	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/registry/v1/contracts/umono/page/v0.1" {
+		var body []byte
+		switch r.URL.Path {
+		case "/registry/v1/contracts/umono/page/v0.1":
+			body = contract
+		case "/registry/v1/contracts/umono/page/v0.1.minisig":
+			body = signature
+		default:
 			http.NotFound(w, r)
 			return
 		}
-		if status == http.StatusOK {
-			_, _ = w.Write([]byte("contract"))
+		if status != http.StatusOK {
+			w.WriteHeader(status)
 			return
 		}
-		w.WriteHeader(status)
+		_, _ = w.Write(body)
 	}))
 	t.Cleanup(srv.Close)
 	return themeproject.Registry{BaseURL: srv.URL, Client: srv.Client()}
@@ -65,8 +93,12 @@ func TestThemeCreateWithFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read new-theme/.dev/contracts/umono/page/v0.1.toml: %v", err)
 	}
-	if string(gotContract) != "contract" {
-		t.Fatalf("new-theme/.dev/contracts/umono/page/v0.1.toml = %q, want %q", string(gotContract), "contract")
+	wantContract, err := os.ReadFile(contractPath(t, "page-v0.1.toml"))
+	if err != nil {
+		t.Fatalf("read page-v0.1.toml: %v", err)
+	}
+	if string(gotContract) != string(wantContract) {
+		t.Fatalf("new-theme/.dev/contracts/umono/page/v0.1.toml = %q, want %q", string(gotContract), string(wantContract))
 	}
 
 	output := out.String()
